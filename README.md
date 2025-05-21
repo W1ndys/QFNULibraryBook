@@ -1,4 +1,4 @@
-# QFNU-Library-Book
+# QFNULibraryBook
 
 曲阜师范大学图书馆预约程序
 
