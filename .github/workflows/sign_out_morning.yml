@@ -1,4 +1,4 @@
-name: 图书馆早上签退
+name: 图书馆早上签到
 
 on:
   schedule:
@@ -25,4 +25,4 @@ jobs:
           TZ: Asia/Shanghai
         run: |
           cd zxy/py
-          python sign_out.py
+          python check_in.py
