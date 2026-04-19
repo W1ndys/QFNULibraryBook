@@ -115,7 +115,7 @@ EXCLUDE_ID = {
 def send_post_request_and_save_response(url, data, headers):
     global MESSAGE
     retries = 0
-    while retries < 30:
+    while retries < 100:
         try:
             response = requests.post(url, json=data, headers=headers, timeout=120)
             response.raise_for_status()
@@ -379,7 +379,7 @@ def select_seat(build_id, segment, nowday):
     global MESSAGE, FLAG
     retries = 0  # 添加重试计数器
 
-    while not FLAG and retries < 30:
+    while not FLAG and retries < 100:
         logger.info(f"开始第 {retries+1} 次尝试获取座位")
         retries += 1
 
@@ -500,7 +500,7 @@ def select_seat(build_id, segment, nowday):
             
 
     # 如果超过最大重试次数仍然没有获取到座位,则退出程序
-    if retries >= 30:
+    if retries >= 100:
         logger.error("超过最大重试次数,无法获取座位")
         MESSAGE += "\n超过最大重试次数,无法获取座位"
         send_message()

@@ -443,7 +443,7 @@ def select_seat(build_id, segment, nowday):
     global MESSAGE
     retries = 0  # 添加重试计数器
     # 初始化
-    while not FLAG and retries < 30:
+    while not FLAG and retries < 100:
         retries += 1
         # 获取座位信息
         # 优选逻辑
@@ -484,7 +484,7 @@ def select_seat(build_id, segment, nowday):
             break
 
     # 如果超过最大重试次数仍然没有获取到座位,则退出程序
-    if retries >= 30:
+    if retries >= 100:
         logger.error("超过最大重试次数,无法获取座位")
         MESSAGE += "\n超过最大重试次数,无法获取座位"
         send_message()
