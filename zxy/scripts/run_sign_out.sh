@@ -1,0 +1,15 @@
+#!/bin/bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_DIR="$(dirname "$SCRIPT_DIR")/py"
+LOG_FILE="$SCRIPT_DIR/logs/sign_out_$(date +\%Y\%m\%d).log"
+
+mkdir -p "$SCRIPT_DIR/logs"
+
+cd "$PYTHON_DIR" || exit 1
+
+{
+    echo "========== $(date) 开始执行 sign_out.py =========="
+    python3 sign_out.py
+    echo "========== $(date) sign_out.py 执行完成 =========="
+} 2>&1 | tee -a "$LOG_FILE"

@@ -1,0 +1,6 @@
+requests
+pyyaml
+python-telegram-bot
+pycryptodome
+beautifulsoup4
+cryptography

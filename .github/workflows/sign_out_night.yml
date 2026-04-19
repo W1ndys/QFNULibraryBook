@@ -1,0 +1,28 @@
+name: 图书馆晚上签退
+
+on:
+  schedule:
+    - cron: '29 13 * * *'  # 北京时间 21:29 = UTC 13:29
+  workflow_dispatch:
+
+jobs:
+  sign-out-night:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: 安装依赖
+        run: |
+          pip install -r requirements.txt
+          
+      - name: 运行晚上签退
+        env:
+          TZ: Asia/Shanghai
+        run: |
+          cd zxy/py
+          python sign_out.py
