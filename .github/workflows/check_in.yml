@@ -22,21 +22,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests pyyaml cryptography python-telegram-bot
 
-        run: |
-          cat > py/config.yml << 'EOF'
-          USERNAME: "${{ secrets.USERNAME }}"
-          PASSWORD: "${{ secrets.PASSWORD }}"
-          PUSH_METHOD: "${{ secrets.PUSH_METHOD }}"
-          DD_BOT_TOKEN: "${{ secrets.DD_BOT_TOKEN }}"
-          DD_BOT_SECRET: "${{ secrets.DD_BOT_SECRET }}"
-          TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          CHANNEL_ID: "${{ secrets.CHANNEL_ID }}"
-          BARK_URL: "${{ secrets.BARK_URL }}"
-          BARK_EXTRA: "${{ secrets.BARK_EXTRA }}"
-          ANPUSH_TOKEN: "${{ secrets.ANPUSH_TOKEN }}"
-          ANPUSH_CHANNEL: "${{ secrets.ANPUSH_CHANNEL }}"
-          GITHUB: "true"
-          EOF
-
       - name: 运行签到脚本
         run: python py/check_in.py
