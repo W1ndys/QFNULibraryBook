@@ -2,9 +2,13 @@
 
 曲阜师范大学图书馆预约程序
 
-**免责声明和使用声明**
+## 项目简介
 
-本脚本的设计目的是为有学习需求的同学提供一个便捷的图书馆预约方式，以帮助大家更高效地利用学习资源。但请注意，本项目仅供学习使用，使用本脚本预约图书馆座位后，请合理、有效地利用座位时间进行学习，以免占用其他有需求同学的学习资源。
+本项目是一个用于曲阜师范大学图书馆座位预约的自动化脚本，旨在为有学习需求的同学提供便捷的预约方式，帮助大家更高效地利用学习资源。
+
+## 免责声明和使用声明
+
+本脚本仅供学习使用，使用本脚本预约图书馆座位后，请合理、有效地利用座位时间进行学习，以免占用其他有需求同学的学习资源。
 
 **注意事项：**
 
@@ -14,55 +18,67 @@
 
 本项目为公益性质，任何滥用行为与开发者无关。开发者保留在必要时对项目进行调整或关闭的权利。
 
-感谢大家的理解与支持！请共同营造一个积极的学习氛围，合理使用本项目，帮助更多人享受便捷的学习环境。
+## 功能特点
+
+- **多种预约模式**：提供三种预约模式，满足不同需求
+- **自动签到签退**：支持自动签到和签退功能
+- **多渠道通知**：支持钉钉、Telegram、Bark、Anpush等通知方式
+- **Docker部署**：提供Docker容器化部署方案，方便快捷
 
 ## 快速启动
 
 ### 前提条件
 
 - Python 3.12.1（Python 3.10+）
-- 运行环境：Windows 10、Ubuntu 20.04、MacOS 12.0+
+- 运行环境：Windows 10、Ubuntu 20.04、MacOS 12.0+ 或 Docker环境
 
 ### 安装依赖
 
-```
-pip install -r requirements.txt
+```bash
+pip install -r py/requirements.txt
 ```
 
 ### 配置程序
 
-打开配置文件 `py/config.yml` ，根据注释修改配置项。
+打开配置文件 `py/config.yml`，根据注释修改配置项：
 
 1. `USERNAME`：图书馆账号
 2. `PASSWORD`：图书馆密码
+3. `PUSH_METHOD`：通知方式（可选值：TG、ANPUSH、BARK、DD）
+4. 对应通知方式的相关配置
 
 ### 程序介绍
 
-相较于原作者的程序，本项目删除了预约当日的设置，只保留预约明天的设置。
-
-- `py/get_seat_tomorrow_mode_1.py`：预约模式 1，预约明天的座位，仅适用于西校区图书馆的三个自习室，个人优选了有插座的位置。
-- `py/get_seat_tomorrow_mode_2.py`：预约模式 2，预约明天的座位，指定模式，请预先根据 json/seat_info 中各个自习室的真实位置('name')获取座位代号('id')，请输入对应自习室的对应 id。
+- `py/get_seat_tomorrow_mode_1.py`：预约模式 1，预约明天的座位，仅适用于西校区图书馆的三个自习室，优选了有插座的位置。
+- `py/get_seat_tomorrow_mode_2.py`：预约模式 2，预约明天的座位，指定模式，需要预先根据 json/seat_info 中各个自习室的真实位置('name')获取座位代号('id')。
 - `py/get_seat_tomorrow_mode_3.py`：预约模式 3，预约明天的座位，默认模式，全随机预约，速度最快，成功的概率最大。
 - `py/sign_out.py`：签退程序，签退图书馆。
-- `py/check_in.py`：签到程序，签到图书馆。该功能属于**违规操作**，请务必**谨慎使用**。请务必在**合理的时间段内执行**脚本
+- `py/check_in.py`：签到程序，签到图书馆。该功能属于**违规操作**，请务必**谨慎使用**。
 
-### 通知配置
+### 运行方式
 
-#### 钉钉机器人通知
+#### 直接运行
 
-打开配置文件 `py/config.json` ，根据注释修改配置项。
+```bash
+# 运行预约模式1
+python py/get_seat_tomorrow_mode_1.py
 
-1. `DD_BOT_TOKEN`：钉钉机器人 Token
-2. `DD_BOT_SECRET`：钉钉机器人密钥
+# 运行预约模式2
+python py/get_seat_tomorrow_mode_2.py
 
-3. `CHANNEL_ID`：Telegram 频道 ID
-4. `TELEGRAM_BOT_TOKEN`：Telegram Bot Token
+# 运行预约模式3
+python py/get_seat_tomorrow_mode_3.py
 
-5. `BARK_URL`：Bark 推送地址
-6. `BARK_EXTRA`：Bark 额外参数
+# 运行签到
+python py/check_in.py
 
-7. `ANPUSH_TOKEN`：Anpush Token
-8. `ANPUSH_CHANNEL`：Anpush 推送频道
+# 运行签退
+python py/sign_out.py
+```
+
+#### Docker运行
+
+详细的Docker部署指南请参考 [DEPLOY.md](DEPLOY.md) 文件。
 
 ## 与原作者的区别
 
@@ -73,6 +89,7 @@ pip install -r requirements.txt
 - 删除了重新预约功能（原模式 5）
 - 增加了钉钉机器人通知功能，可在配置文件中配置。
 - 增加了签到功能，感谢开发者 [@nakaii-002](https://github.com/nakaii-002) 的贡献。
+- 增加了Docker部署支持，方便在不同环境中运行。
 
 以上被删除的功能如有需要，可以自行前往`old_py`目录下查看。
 
@@ -80,7 +97,7 @@ pip install -r requirements.txt
 
 基于此项目优化后的版本：
 
-在根目录的 v3 目录下，感谢 https://github.com/CunchuanHuang 提供的优化版本。增加了西区二楼的，把一些数据存储格式也改了一些，cofig 文件中设置选座的格式也稍有调整
+在根目录的 v3.1 目录下，感谢 https://github.com/CunchuanHuang 提供的优化版本。增加了西区二楼的，把一些数据存储格式也改了一些，config 文件中设置选座的格式也稍有调整。
 
 ## 贡献者
 

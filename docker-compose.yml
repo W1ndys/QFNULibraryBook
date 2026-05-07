@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  qfnu-library-book:
+    build: .
+    volumes:
+      - ./py/config.yml:/app/config.yml
+      - ./json:/app/json
+    restart: no
+    environment:
+      - TZ=Asia/Shanghai
