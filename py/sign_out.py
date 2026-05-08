@@ -21,6 +21,8 @@ import hmac
 import hashlib
 import urllib.parse
 
+import argparse
+
 
 # 配置日志
 logger = logging.getLogger("httpx")
@@ -48,24 +50,25 @@ PUSH_METHOD = ""
 
 
 # 读取YAML配置文件并设置全局变量
-def read_config_from_yaml():
+def read_config_from_yaml(config_file=None):
     global CHANNEL_ID, TELEGRAM_BOT_TOKEN, CLASSROOMS_NAME, SEAT_ID, DATE, USERNAME, PASSWORD, GITHUB, BARK_EXTRA, BARK_URL, ANPUSH_TOKEN, ANPUSH_CHANNEL, PUSH_METHOD, DD_BOT_TOKEN, DD_BOT_SECRET
-    current_dir = os.path.dirname(
-        os.path.abspath(__file__)
-    )  # 获取当前文件所在的目录的绝对路径
-    config_file_path = os.path.join(
-        current_dir, "config.yml"
-    )  # 将文件名与目录路径拼接起来
-    with open(
-        config_file_path, "r", encoding="utf-8"
-    ) as yaml_file:  # 指定为UTF-8格式打开文件
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if config_file is None:
+        config_file_path = os.path.join(current_dir, "config.yml")
+    else:
+        if os.path.isabs(config_file):
+            config_file_path = config_file
+        else:
+            config_file_path = os.path.join(current_dir, config_file)
+    
+    logger.info(f"读取配置文件: {config_file_path}")
+    
+    with open(config_file_path, "r", encoding="utf-8") as yaml_file:
         config = yaml.safe_load(yaml_file)
         CHANNEL_ID = config.get("CHANNEL_ID", "")
         TELEGRAM_BOT_TOKEN = config.get("TELEGRAM_BOT_TOKEN", "")
-        CLASSROOMS_NAME = config.get(
-            "CLASSROOMS_NAME", []
-        )  # 将 CLASSROOMS_NAME 读取为列表
-        SEAT_ID = config.get("SEAT_ID", [])  # 将 SEAT_ID 读取为列表
+        CLASSROOMS_NAME = config.get("CLASSROOMS_NAME", [])
+        SEAT_ID = config.get("SEAT_ID", [])
         DATE = config.get("DATE", "")
         USERNAME = config.get("USERNAME", "")
         PASSWORD = config.get("PASSWORD", "")
@@ -295,8 +298,12 @@ def go_home():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="图书馆签退脚本")
+    parser.add_argument("-c", "--config", help="指定配置文件路径，默认为 config.yml")
+    args = parser.parse_args()
+    
     try:
-        read_config_from_yaml()
+        read_config_from_yaml(args.config)
         go_home()
     except KeyboardInterrupt:
         logger.info("主动退出程序，程序将退出。")

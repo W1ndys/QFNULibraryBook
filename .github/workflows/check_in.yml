@@ -23,4 +23,6 @@ jobs:
           pip install requests pyyaml python-telegram-bot pycryptodome beautifulsoup4 cryptography
 
       - name: 运行签到脚本
-        run: python py/check_in.py
+        run: |
+          python py/check_in.py -c config_studentA.yml
+          python py/check_in.py -c config_studentB.yml

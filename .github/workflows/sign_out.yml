@@ -23,4 +23,6 @@ jobs:
           pip install requests pyyaml python-telegram-bot pycryptodome beautifulsoup4 cryptography
 
       - name: 运行签退脚本
-        run: python py/sign_out.py
+        run: |
+          python py/sign_out.py -c config_studentA.yml
+          python py/sign_out.py -c config_studentB.yml
