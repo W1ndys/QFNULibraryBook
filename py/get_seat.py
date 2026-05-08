@@ -292,7 +292,6 @@ def check_reservation_status():
                 FLAG = True
             elif status == "开放预约时间19:20":
                 logger.info("未到预约时间")
-                time.sleep(1)
             elif status == "您尚未登录":
                 logger.info("没有登录，将重新尝试获取 token")
                 get_auth_token()
@@ -410,8 +409,6 @@ def select_seat(build_id, segment, nowday):
                     select_id = random_get_seat(new_data)
                     logger.info(f"随机选择的座位为: {select_id}")
                     post_to_get_seat(select_id, segment)
-                else:
-                    time.sleep(3)
                 continue
             # 模式 2: 选择有插座的位置
             elif MODE == '2':
@@ -421,9 +418,6 @@ def select_seat(build_id, segment, nowday):
                     select_id = random_get_seat(new_data)
                     logger.info(f"随机选择的座位为: {select_id}")
                     post_to_get_seat(select_id, segment)
-                else:
-                    # logger.info("无可用座位, 程序将 1s 后再次获取")
-                    time.sleep(3)
                 continue
             # 模式 3: 随机选择
             elif MODE == '3':
@@ -486,8 +480,7 @@ def select_seat(build_id, segment, nowday):
                         logger.info(f"从指定座位中选择的座位为: {selected_seat['no']} (系统ID: {select_id})")
                     post_to_get_seat(select_id, segment)
                 else:
-                    logger.info("指定座位列表中无可用座位，3秒后重试")
-                    time.sleep(3)
+                    logger.info("指定座位列表中无可用座位，立即重试")
                 continue
             else:
                 logger.error(f"未知的模式: {MODE}")
@@ -495,7 +488,7 @@ def select_seat(build_id, segment, nowday):
             
 
     # 如果超过最大重试次数仍然没有获取到座位,则退出程序
-    if retries >= 100:
+    if retries >= 1000:
         logger.error("超过最大重试次数,无法获取座位")
         MESSAGE += "\n超过最大重试次数,无法获取座位"
         send_message()
