@@ -26,8 +26,8 @@ DD_BOT_TOKEN: ""
 DD_BOT_SECRET: ""
 
 # 账号授权相关，USERNAME 和 PASSWORD 请填入你的学号和密码
-USERNAME: ""
-PASSWORD: ""
+USERNAME: "2023413518"
+PASSWORD: "Zhz1314521"
 
 # 是否是 Github Action
 GITHUB: false
