@@ -2,8 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import time
 from ids_utils.passwd_encrypt import generate_encrypted_password
-
-# from ids_utils.captcha_ocr import get_ocr_res
+from ids_utils.slider_captcha import solve_slider_captcha
 import logging
 
 session = requests.session()
@@ -83,16 +82,18 @@ def get_token(username, password):
     """
     cap_res = ""
     salt, execution_data = get_salt_and_execution()
-    # logging.info("[+]---正在检查是否需要验证码")
-    # if captcha_check(username):
-    #     logging.info("[-]------需要验证码，正在尝试获取验证码")
-    #     try:
-    #         cap_pic = get_captcha()
-    #         cap_res = get_ocr_res(cap_pic).lower()
-    #     except Exception:
-    #         logger.error("[X]------获取或识别验证码失败")
-    # else:
-    #     logger.info("[-]------无需验证码，尝试获取Token")
+
+    # 滑块验证码处理
+    logger.info("[+]---正在检查是否需要验证码")
+    if captcha_check(username):
+        logger.info("[-]---需要滑块验证码，正在尝试解决")
+        try:
+            solve_slider_captcha(session)
+            logger.info("[+]---滑块验证码已通过")
+        except Exception as e:
+            logger.error(f"[X]---滑块验证码解决失败: {e}")
+    else:
+        logger.info("[-]---无需验证码")
 
     enc_passwd = generate_encrypted_password(password, salt)
     uri = "http://ids.qfnu.edu.cn/authserver/login?service=http%3A%2F%2Flibyy.qfnu.edu.cn%2Fapi%2Fcas%2Fcas"

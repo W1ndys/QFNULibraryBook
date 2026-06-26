@@ -4,3 +4,6 @@ python-telegram-bot
 pycryptodome
 beautifulsoup4
 cryptography
+opencv-python
+numpy
+scipy
