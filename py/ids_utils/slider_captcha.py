@@ -21,7 +21,7 @@ from ids_utils.passwd_encrypt import generate_random_string, encrypt_data
 
 # 滑块画布宽度（与 JS 端 sliderCaptcha width 一致）
 CANVAS_WIDTH = 280
-MAX_RETRIES = 3
+MAX_RETRIES = 5
 
 logger = logging.getLogger("slider_captcha")
 
@@ -35,10 +35,11 @@ def open_slider_captcha(session):
     """
     加载滑块验证码图片
 
+    调用前需先请求 toSliderCaptcha.htl 初始化服务器端状态。
     GET /authserver/common/openSliderCaptcha.htl
     返回: {"big_image": bytes, "small_image": bytes, "safe_secure": str}
     """
-    url = "https://ids.qfnu.edu.cn/authserver/common/openSliderCaptcha.htl"
+    url = "http://ids.qfnu.edu.cn/authserver/common/openSliderCaptcha.htl"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                        "(KHTML, like Gecko) Chrome/117.0.5938.63 Safari/537.36",
@@ -76,67 +77,68 @@ def open_slider_captcha(session):
         raise SliderCaptchaError(f"获取滑块验证码图片失败: {e}")
 
 
-def detect_gap_candidates(big_image_bytes, max_candidates=5):
+def detect_gap_position(big_image_bytes, small_image_bytes):
     """
-    检测拼图缺口候选 x 坐标列表（画布坐标系 280px）
+    检测拼图缺口 x 坐标（画布坐标系 280px）
 
-    使用 Sobel 边缘检测找显著峰对，按双峰最低强度排序。
-    返回前 max_candidates 个候选位置（画布坐标）。
+    使用 alpha 掩码模板匹配：利用小图的透明通道裁剪出拼图块形状，
+    然后在大图中匹配对应位置。经实测置信度通常 > 0.85。
+
+    注意：每个验证码只能调用 verify 一次，失败即失效，需刷新图片重试。
 
     Returns:
-        list[int]: 候选画布 x 坐标列表，按置信度降序
+        int: 画布坐标系下的缺口 x 偏移量（像素）
     """
-    try:
-        from scipy.signal import find_peaks
-    except ImportError:
-        raise SliderCaptchaError("缺少 scipy 依赖，无法检测缺口位置")
-
     try:
         big_img = cv2.imdecode(
             np.frombuffer(big_image_bytes, np.uint8), cv2.IMREAD_GRAYSCALE
         )
-        if big_img is None:
-            raise SliderCaptchaError("背景图解码失败")
+        small_raw = cv2.imdecode(
+            np.frombuffer(small_image_bytes, np.uint8), cv2.IMREAD_UNCHANGED
+        )
+
+        if big_img is None or small_raw is None:
+            raise SliderCaptchaError("图片解码失败")
 
         original_width = big_img.shape[1]
         scale = CANVAS_WIDTH / original_width
 
-        # Sobel 水平方向边缘检测 → 按列求和
-        sobel_x = cv2.Sobel(big_img, cv2.CV_64F, 1, 0, ksize=3)
-        col_profile = np.sum(np.abs(sobel_x), axis=0)
-        col_smooth = np.convolve(col_profile, np.ones(5) / 5, mode="same")
+        # 利用 alpha 通道裁剪拼图块
+        if small_raw.shape[2] == 4:
+            alpha = small_raw[:, :, 3]
+            cols = np.where(np.any(alpha > 10, axis=0))[0]
+            rows = np.where(np.any(alpha > 10, axis=1))[0]
+            if len(cols) == 0 or len(rows) == 0:
+                raise SliderCaptchaError("小图无有效内容")
+            x1, x2 = cols[0], cols[-1] + 1
+            y1, y2 = rows[0], rows[-1] + 1
+            small_crop = cv2.cvtColor(
+                small_raw[y1:y2, x1:x2, :3], cv2.COLOR_BGR2GRAY
+            )
+            mask_crop = (alpha[y1:y2, x1:x2] > 10).astype(np.uint8) * 255
+        else:
+            small_crop = (
+                cv2.cvtColor(small_raw, cv2.COLOR_BGR2GRAY)
+                if len(small_raw.shape) == 3
+                else small_raw
+            )
+            mask_crop = None
 
-        # 找显著边缘峰
-        peaks, _ = find_peaks(
-            col_smooth,
-            height=np.mean(col_smooth) * 1.2,
-            distance=20,
-            prominence=500,
+        # 带掩码的模板匹配
+        method = cv2.TM_CCOEFF_NORMED
+        if mask_crop is not None:
+            result = cv2.matchTemplate(big_img, small_crop, method, mask=mask_crop)
+        else:
+            result = cv2.matchTemplate(big_img, small_crop, method)
+
+        _, max_val, _, max_loc = cv2.minMaxLoc(result)
+        move_length = round(max_loc[0] * scale)
+
+        logger.info(
+            f"[+]---缺口检测: 原图x={max_loc[0]}, "
+            f"画布x={move_length}, 置信度={max_val:.3f}"
         )
-
-        if len(peaks) < 2:
-            raise SliderCaptchaError(f"边缘峰不足: 仅检测到 {len(peaks)} 个")
-
-        # 按"双峰最低强度"排序
-        pairs = []
-        for i in range(len(peaks)):
-            for j in range(i + 1, len(peaks)):
-                strength = min(col_smooth[peaks[i]], col_smooth[peaks[j]])
-                gap_x = min(peaks[i], peaks[j])
-                pairs.append((gap_x, strength))
-        pairs.sort(key=lambda p: -p[1])
-
-        # 去重（相近的 x 只保留最强的）
-        candidates = []
-        for gap_x, _ in pairs:
-            canvas_x = round(gap_x * scale)
-            if not candidates or abs(canvas_x - candidates[-1]) > 3:
-                candidates.append(canvas_x)
-            if len(candidates) >= max_candidates:
-                break
-
-        logger.info(f"[+]---缺口候选: {candidates}")
-        return candidates
+        return move_length
 
     except Exception as e:
         if isinstance(e, SliderCaptchaError):
@@ -244,7 +246,7 @@ def verify_slider_captcha(session, canvas_length, move_length, tracks, safe_secu
     POST /authserver/common/verifySliderCaptcha.htl
     请求体: {sign: encrypted_payload}
     """
-    url = "https://ids.qfnu.edu.cn/authserver/common/verifySliderCaptcha.htl"
+    url = "http://ids.qfnu.edu.cn/authserver/common/verifySliderCaptcha.htl"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                        "(KHTML, like Gecko) Chrome/117.0.5938.63 Safari/537.36",
@@ -271,40 +273,53 @@ def solve_slider_captcha(session):
     """
     一站式解决滑块验证码
 
-    对每张验证码图片尝试多个候选缺口位置（由 Sobel 峰对排序决定），
-    总共最多 MAX_RETRIES 次图片刷新。
+    关键约束：每个验证码只能验证一次，失败即失效。
+    每次尝试：toSliderCaptcha → openSliderCaptcha → 检测 → 单次验证。
 
     成功返回 True，全部失败抛出 SliderCaptchaError。
     """
+    base_url = "http://ids.qfnu.edu.cn/authserver"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/117.0.5938.63 Safari/537.36",
+    }
+
     for attempt in range(1, MAX_RETRIES + 1):
         logger.info(f"[+]---滑块验证码第 {attempt}/{MAX_RETRIES} 次尝试")
         try:
-            # 1. 获取滑块图片 + safeSecure
+            # 初始化服务器端滑块验证码状态
+            session.get(f"{base_url}/common/toSliderCaptcha.htl", headers=headers)
+
+            # 获取滑块图片 + safeSecure
             captcha_data = open_slider_captcha(session)
 
-            # 2. 检测多个候选缺口位置
-            candidates = detect_gap_candidates(captcha_data["big_image"])
+            # 检测缺口位置
+            move_length = detect_gap_position(
+                captcha_data["big_image"],
+                captcha_data["small_image"],
+            )
 
-            # 3. 逐一尝试每个候选位置
-            for i, move_length in enumerate(candidates):
-                tracks = generate_mouse_tracks(move_length)
-                success = verify_slider_captcha(
-                    session,
-                    canvas_length=CANVAS_WIDTH,
-                    move_length=move_length,
-                    tracks=tracks,
-                    safe_secure=captcha_data["safe_secure"],
-                )
-                if success:
-                    return True
-                logger.info(f"    候选 {i+1}/{len(candidates)} (x={move_length}) 失败")
+            # 生成拟人轨迹
+            tracks = generate_mouse_tracks(move_length)
 
-            logger.warning(f"[-]---第 {attempt} 次尝试所有候选均失败，准备重试...")
-            time.sleep(1)
+            # 单次验证（失败则验证码失效，需刷新重试）
+            success = verify_slider_captcha(
+                session,
+                canvas_length=CANVAS_WIDTH,
+                move_length=move_length,
+                tracks=tracks,
+                safe_secure=captcha_data["safe_secure"],
+            )
+
+            if success:
+                return True
+
+            logger.warning(f"[-]---第 {attempt} 次尝试失败，准备刷新验证码重试...")
+            time.sleep(0.5)
 
         except SliderCaptchaError as e:
             logger.warning(f"[-]---第 {attempt} 次尝试异常: {e}")
-            time.sleep(1)
+            time.sleep(0.5)
 
     raise SliderCaptchaError(f"滑块验证码 {MAX_RETRIES} 次尝试均失败")
 
@@ -312,7 +327,7 @@ def solve_slider_captcha(session):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    # 独立测试：获取图片并检测缺口候选位置
+    # 独立测试：完整滑块验证流程
     test_session = requests.Session()
     test_session.get(
         "http://ids.qfnu.edu.cn/authserver/login"
@@ -320,14 +335,8 @@ if __name__ == "__main__":
         timeout=10,
     )
 
-    data = open_slider_captcha(test_session)
-    candidates = detect_gap_candidates(data["big_image"])
-    print(f"候选位置: {candidates}")
-
-    if candidates:
-        distance = candidates[0]
-        tracks = generate_mouse_tracks(distance)
-        print(f"轨迹点数: {len(tracks)}")
-        print(f"起点: {tracks[0]}")
-        print(f"终点: {tracks[-1]}")
-        print(f"终点 x == 目标距离: {tracks[-1]['a'] == distance}")
+    try:
+        result = solve_slider_captcha(test_session)
+        print(f"滑块验证结果: {'成功' if result else '失败'}")
+    except SliderCaptchaError as e:
+        print(f"滑块验证失败: {e}")
