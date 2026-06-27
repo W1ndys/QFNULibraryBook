@@ -1,0 +1,9 @@
+USERNAME: '20240001'
+PASSWORD: testpass
+MODE: '3'
+CLASSROOMS_NAME:
+  - 综合楼-801自习室
+DATE: tomorrow
+PUSH_METHOD: DD
+DD_BOT_TOKEN: fake_dd_token
+DD_BOT_SECRET: fake_dd_secret
