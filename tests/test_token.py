@@ -36,42 +36,28 @@ class TestTokenManager:
         assert result.startswith("bearer")
         assert result == "bearerabc123"
 
-    @patch("auth.token.datetime")
     @patch("auth.token.qfnu_login")
-    def test_caches_within_expiry(self, mock_login, mock_dt):
-        """1.5h 内重复调用只登录一次"""
-        t1 = datetime(2026, 6, 28, 10, 0, 0)
-        t2 = datetime(2026, 6, 28, 11, 0, 0)  # 1 小时后，未过期
-
+    def test_caches_within_expiry(self, mock_login):
+        """1.5h 内重复调用只登录一次（手动设置 _timestamp 模拟）"""
         mock_login.return_value = ("张三", "abc123")
-        mock_dt.now.return_value = t1
-        mock_dt.timedelta = timedelta
-
         mgr = TokenManager("20240001", "pass")
+        # 首次调用
         mgr.get_token()
         assert mock_login.call_count == 1
-
-        # 第二次调用，时间推进但未过期
-        mock_dt.now.return_value = t2
+        # 手动设置 timestamp 为 1 小时前（未过期）
+        mgr._timestamp = datetime.now() - timedelta(hours=1)
         mgr.get_token()
         assert mock_login.call_count == 1  # 仍只调用 1 次
 
-    @patch("auth.token.datetime")
     @patch("auth.token.qfnu_login")
-    def test_refreshes_after_expiry(self, mock_login, mock_dt):
+    def test_refreshes_after_expiry(self, mock_login):
         """超过 1.5h 后重新登录"""
-        t1 = datetime(2026, 6, 28, 10, 0, 0)
-        t2 = datetime(2026, 6, 28, 11, 31, 0)  # 1h31m，已过期
-
         mock_login.return_value = ("张三", "abc123")
-        mock_dt.now.return_value = t1
-        mock_dt.timedelta = timedelta
-
         mgr = TokenManager("20240001", "pass")
         mgr.get_token()
         assert mock_login.call_count == 1
-
-        mock_dt.now.return_value = t2
+        # 手动设置 timestamp 为 2 小时前（已过期）
+        mgr._timestamp = datetime.now() - timedelta(hours=2)
         mgr.get_token()
         assert mock_login.call_count == 2  # 重新登录
 
