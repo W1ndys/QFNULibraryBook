@@ -1,12 +1,12 @@
 # QFNULibraryBook
 
-曲阜师范大学图书馆预约程序
+曲阜师范大学图书馆座位自动预约程序
 
 ## 项目简介
 
-本项目是一个用于曲阜师范大学图书馆座位预约的自动化脚本，旨在为有学习需求的同学提供便捷的预约方式，帮助大家更高效地利用学习资源。
+自动化完成自习室座位的预约、签到、签退三阶段流程，支持多用户、多教室、多推送渠道。目标系统为 `http://libyy.qfnu.edu.cn`。
 
-## 免责声明和使用声明
+## 免责声明
 
 本脚本仅供学习使用，使用本脚本预约图书馆座位后，请合理、有效地利用座位时间进行学习，以免占用其他有需求同学的学习资源。
 
@@ -20,114 +20,102 @@
 
 ## 功能特点
 
-- **多种预约模式**：提供三种预约模式，满足不同需求
-- **自动签到签退**：支持自动签到和签退功能
-- **多渠道通知**：支持钉钉、Telegram、Bark、Anpush等通知方式
-- **Docker部署**：提供Docker容器化部署方案，方便快捷
+- **多种预约模式**：4 种模式（指定范围+插座、插座优先、完全随机、指定座位）
+- **自动签到签退**：支持自动签到和签退
+- **滑块验证码破解**：OpenCV 边缘检测 + 三阶段搜索策略
+- **多渠道通知**：钉钉、Telegram、Bark、AnPush
+- **多用户支持**：通过 `-c` 参数指定不同配置文件
+- **CI/CD**：GitHub Actions 定时签到签退
 
-## 快速启动
-
-### 前提条件
-
-- Python 3.12.1（Python 3.10+）
-- 运行环境：Windows 10、Ubuntu 20.04、MacOS 12.0+ 或 Docker环境
+## 快速开始
 
 ### 安装依赖
 
 ```bash
-pip install -r py/requirements.txt
+pip install -r requirements.txt
 ```
 
-### 配置程序
+### 配置
 
-打开配置文件 `py/config.yml`，根据注释修改配置项：
+编辑 `py/config.yml`（模板）或创建 `py/config_studentX.yml`（多用户），填入：
 
-1. `USERNAME`：图书馆账号
-2. `PASSWORD`：图书馆密码
-3. `PUSH_METHOD`：通知方式（可选值：TG、ANPUSH、BARK、DD）
-4. 对应通知方式的相关配置
+- `USERNAME` / `PASSWORD`：学号和密码
+- `PUSH_METHOD`：通知方式（`TG` / `DD` / `BARK` / `ANPUSH`）
+- 对应通知渠道的 token/密钥
+- `CLASSROOMS_NAME`：要预约的自习室列表
+- `MODE`：选座模式（1-4）
+- `DATE`：预约日期（`today` / `tomorrow`）
 
-### 程序介绍
-
-- `py/get_seat_tomorrow_mode_1.py`：预约模式 1，预约明天的座位，仅适用于西校区图书馆的三个自习室，优选了有插座的位置。
-- `py/get_seat_tomorrow_mode_2.py`：预约模式 2，预约明天的座位，指定模式，需要预先根据 json/seat_info 中各个自习室的真实位置('name')获取座位代号('id')。
-- `py/get_seat_tomorrow_mode_3.py`：预约模式 3，预约明天的座位，默认模式，全随机预约，速度最快，成功的概率最大。
-- `py/sign_out.py`：签退程序，签退图书馆。
-- `py/check_in.py`：签到程序，签到图书馆。该功能属于**违规操作**，请务必**谨慎使用**。
-
-### 运行方式
-
-#### 直接运行
+### 运行
 
 ```bash
-# 运行预约模式1
-python py/get_seat_tomorrow_mode_1.py
+# 预约座位
+python py/get_seat.py -c config_studentA.yml
 
-# 运行预约模式2
-python py/get_seat_tomorrow_mode_2.py
+# 签到
+python py/check_in.py -c config_studentA.yml
 
-# 运行预约模式3
-python py/get_seat_tomorrow_mode_3.py
+# 签退
+python py/sign_out.py -c config_studentA.yml
 
-# 运行签到
-python py/check_in.py
-
-# 运行签退
-python py/sign_out.py
+# 管理员：抓取座位信息快照
+python py/get_seat_info_ForAdmin.py -c config.yml --classrooms "东校区图书馆-三楼自修区"
 ```
 
-#### Docker运行
+## 预约模式
 
-详细的Docker部署指南请参考 [DEPLOY.md](DEPLOY.md) 文件。
+| 模式 | 说明 |
+|:-----|:-----|
+| 1 | 指定 ID 范围内的有插座座位（排除无插座座位） |
+| 2 | 有插座座位（任意位置） |
+| 3 | 完全随机选座（最快，成功率最高） |
+| 4 | 指定座位优先（如 228 号） |
 
-## 与原作者的区别
+## 支持的自习室
 
-二次开发者对原作者的程序进行了以下修改：
+| 教室名称 | 位置 |
+|:---------|:-----|
+| 西校区图书馆-二层/三层/四层自习室 | 西校区图书馆 |
+| 西校区图书馆-五层静音自习室 | 西校区图书馆 |
+| 西校区东辅楼-二层/三层自习室 | 西校区东辅楼 |
+| 东校区图书馆-一楼自修区（朗读空间） | 东校区图书馆 |
+| 东校区图书馆-三楼自修区 | 东校区图书馆 |
+| 东校区图书馆-四层中文现刊室 | 东校区图书馆 |
+| 综合楼-801/803/804/805/806自习室 | 综合楼 |
+| 行政楼-四层东区/中区/西区自习室 | 行政楼 |
+| 电视台楼-二层自习室 | 电视台楼 |
 
-- 分离了预约模式 1、2、3，并分别进行了部分重构。
-- 删除了预约当日的设置，只保留预约明天的设置。
-- 删除了重新预约功能（原模式 5）
-- 增加了钉钉机器人通知功能，可在配置文件中配置。
-- 增加了签到功能，感谢开发者 [@nakaii-002](https://github.com/nakaii-002) 的贡献。
-- 增加了Docker部署支持，方便在不同环境中运行。
+## 项目结构
 
-以上被删除的功能如有需要，可以自行前往`old_py`目录下查看。
+```
+py/
+├── auth/           # 登录认证（滑块验证码 + CAS + Token 管理）
+├── config/         # 配置管理（AppConfig 数据类）
+├── notify/         # 消息推送（TG/DD/Bark/AnPush）
+├── crypto/         # AES 加密（pycryptodome）
+├── api/            # HTTP 工具和 URL 常量
+├── classrooms.py   # 教室映射和排除座位 ID
+├── get_seat.py     # 预约入口
+├── check_in.py     # 签到入口
+├── sign_out.py     # 签退入口
+└── get_info.py     # 座位查询工具
+json/seat_info/     # 教室座位布局快照
+.github/workflows/  # CI 定时任务
+```
 
-## 其他版本
+## CI/CD
 
-基于此项目优化后的版本：
-
-在根目录的 v3.1 目录下，感谢 https://github.com/CunchuanHuang 提供的优化版本。增加了西区二楼的，把一些数据存储格式也改了一些，config 文件中设置选座的格式也稍有调整。
+GitHub Actions 自动执行：
+- **签到**：每天 08:20（北京时间）
+- **签退**：每天 21:30（北京时间）
+- 支持 `workflow_dispatch` 手动触发
 
 ## 贡献者
 
 - [@W1ndys](https://github.com/W1ndys)：二次开发者
 - [@sakurasep](https://github.com/sakurasep)：原作者
-- [@nakaii-002](https://github.com/nakaii-002)：签到功能贡献者，获取身份验证 Auth_Token 的实现，自动获取 token 的实现
+- [@nakaii-002](https://github.com/nakaii-002)：签到功能贡献者
 
-## 开源许可协议
+## 开源许可
 
-本项目是由 [W1ndys](https://github.com/W1ndys) 基于 [上杉九月](https://github.com/sakurasep) 的 开源项目 [qfnuLibraryBook](https://github.com/sakurasep/qfnuLibraryBook) 二次开发，使用 CC BY-NC 4.0 协议进行授权，拷贝、分享或基于此进行创作时请遵守协议内容：
-
-```
-Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
-
-This is a human-readable summary of (and not a substitute for) the license. You are free to:
-
-Share — copy and redistribute the material in any medium or format
-Adapt — remix, transform, and build upon the material
-
-The licensor cannot revoke these freedoms as long as you follow the license terms.
-Under the following terms:
-
-Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
-
-NonCommercial — You may not use the material for commercial purposes.
-
-No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
-
-Notices:
-
-You do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation.
-No warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material.
-```
+CC BY-NC 4.0 — 基于 [上杉九月](https://github.com/sakurasep) 的 [qfnuLibraryBook](https://github.com/sakurasep/qfnuLibraryBook) 二次开发。
