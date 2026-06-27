@@ -12,22 +12,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 安装依赖
 pip install -r requirements.txt
 
-# 预约座位（读取 py/config.yml）
-python py/get_seat.py
+# 预约座位
+python py/get_seat.py -c config_studentA.yml
 
-# 签到（支持指定配置文件）
+# 签到
 python py/check_in.py -c config_studentA.yml
 
 # 签退
 python py/sign_out.py -c config_studentA.yml
 
-# 管理员：抓取座位信息并保存到 json/seat_info/
+# 管理员：抓取座位信息
 python py/get_seat_info_ForAdmin.py
 ```
 
 无测试套件，无 lint 配置。
 
 ## Architecture
+
+### 目录结构
+
+```
+py/
+├── auth/               # 登录 + Token 管理
+│   ├── login.py        # IDS CAS 登录 + 滑块验证码 + Bearer Token 获取
+│   └── token.py        # TokenManager 类（自动缓存和过期管理）
+├── config/
+│   └── config.py       # AppConfig 数据类（替代全局变量）
+├── notify/
+│   └── notify.py       # 统一消息推送（TG/DD/Bark/AnPush）
+├── crypto/
+│   └── aes.py          # 统一 AES 加密（仅 pycryptodome）
+├── api/
+│   ├── constants.py    # API URL 和默认请求头
+│   └── http.py         # 带重试的 HTTP 请求工具
+├── classrooms.py       # 教室映射 + EXCLUDE_ID
+├── get_seat.py         # 入口：预约
+├── check_in.py         # 入口：签到
+├── sign_out.py         # 入口：签退
+├── get_info.py         # 工具：座位查询
+└── get_seat_info_ForAdmin.py  # 管理员工具
+```
 
 ### 三阶段工作流
 
@@ -37,11 +61,11 @@ python py/get_seat_info_ForAdmin.py
 
 ### 认证链
 
-`get_bearer_token.py` → `get_ids_token.py`（IDS 登录，BeautifulSoup 抓取登录页提取 salt/execution 字段）→ `ids_utils/passwd_encrypt.py`（AES-CBC 加密密码）→ CAS token 换取 bearer token。bearer token 有效期 1.5 小时。
+`py/auth/login.py` 实现完整的登录流程：正则提取登录页参数 → 滑块验证码破解（OpenCV 边缘检测 + 模板匹配，三阶段搜索）→ AES-CBC 加密密码 → IDS CAS 登录 → CAS Token 换取 Bearer Token。`py/auth/token.py` 的 `TokenManager` 类封装 token 获取和 1.5 小时缓存。
 
 ### 核心工具模块 (`py/get_info.py`)
 
-包含 `classroom_id_mapping`（18 个自习室名称→ID 映射）、日期/时间段/座位查询函数、以及 AES 加密/解密函数（使用 pycryptodome，密钥由当前日期回文派生）。
+包含日期/时间段/座位查询函数。教室映射（19+1 个别名）在 `py/classrooms.py` 中统一管理，AES 加密在 `py/crypto/aes.py` 中统一管理。
 
 ### 预约模式（`get_seat.py` 中的 `MODE`）
 
@@ -54,7 +78,7 @@ python py/get_seat_info_ForAdmin.py
 
 ### 消息推送
 
-所有入口脚本共享 4 种推送方式，由配置文件 `PUSH_METHOD` 字段控制：`TG`（Telegram）、`DD`（钉钉，HMAC-SHA256 签名）、`BARK`、`ANPUSH`。通知函数在各脚本中重复定义。
+`py/notify/notify.py` 统一实现 4 种推送方式，由配置文件 `PUSH_METHOD` 字段控制：`TG`（Telegram）、`DD`（钉钉，HMAC-SHA256 签名）、`BARK`、`ANPUSH`。调用签名：`send_message(config, message, title)`。
 
 ### CI/CD
 
@@ -62,11 +86,11 @@ GitHub Actions 两个工作流定时执行：
 - `check_in.yml` — 每天 00:20 UTC（北京时间 08:20）签到
 - `sign_out.yml` — 每天 13:30 UTC（北京时间 21:30）签退
 
-均支持 `workflow_dispatch` 手动触发，遍历 `config_studentA/B/C.yml` 多用户配置。
+均支持 `workflow_dispatch` 手动触发，依赖通过 `pip install -r requirements.txt` 安装。
 
 ### 关键 API 端点
 
-均位于 `http://libyy.qfnu.edu.cn/api/`：
+均位于 `http://libyy.qfnu.edu.cn/api/`，URL 常量定义在 `py/api/constants.py`：
 - `/Seat/date` — 获取可用时间段
 - `/Seat/seat` — 获取座位可用性
 - `/Seat/confirm` — 预约（AES 加密请求体）
@@ -76,8 +100,7 @@ GitHub Actions 两个工作流定时执行：
 
 ## Key Technical Details
 
-- **AES 加密混合使用两个库**：`get_info.py` 使用 `pycryptodome`（`Crypto`），`check_in.py` 和 `passwd_encrypt.py` 使用 `cryptography`（`cryptography.hazmat`）。修改加密逻辑时注意区分。
-- **配置文件**位于 `py/` 目录下，`config.yml` 为模板，`config_student*.yml` 用于 CI 多用户场景。
+- **AES 加密统一使用 pycryptodome**：`py/crypto/aes.py` 提供 `encrypt_seat_data()`（日期回文密钥）和 `encrypt_login_data()`（随机前缀 + 随机 IV）。
+- **配置管理**：`py/config/config.py` 的 `AppConfig` 数据类替代全局变量，通过 `AppConfig.from_yaml(config_file)` 加载。配置文件位于 `py/` 目录下。
 - **座位数据**：`json/seat_info/` 下的 JSON 文件为静态座位布局快照，由 `get_seat_info_ForAdmin.py` 生成。
-- **全局变量**：代码大量使用全局变量管理 token、时间戳等状态。
 - **提交规范**：遵循宽松的 conventional commit 风格（`feat:`、`fix:`、`ci:`、`refactor:`、`chore:`、`docs:`）。

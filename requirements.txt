@@ -2,8 +2,5 @@ requests
 pyyaml
 python-telegram-bot
 pycryptodome
-beautifulsoup4
-cryptography
-opencv-python
+opencv-python-headless
 numpy
-scipy
