@@ -98,7 +98,7 @@ def post_to_get_seat(select_id, segment, config, token_mgr, messages):
         send_message(config, "\n".join(messages), title)
         sys.exit()
 
-    check_reservation_status(seat_result, config, token_mgr, messages)
+    return check_reservation_status(seat_result, config, token_mgr, messages)
 
 
 def random_get_seat(data):
@@ -138,7 +138,8 @@ def select_seat(build_id, segment, nowday, config, token_mgr, messages):
             if new_data:
                 select_id = random_get_seat(new_data)
                 logger.info(f"随机选择的座位为: {select_id}")
-                post_to_get_seat(select_id, segment, config, token_mgr, messages)
+                if post_to_get_seat(select_id, segment, config, token_mgr, messages):
+                    flag = True
             continue
 
         elif config.mode == "2":
@@ -147,14 +148,16 @@ def select_seat(build_id, segment, nowday, config, token_mgr, messages):
             if new_data:
                 select_id = random_get_seat(new_data)
                 logger.info(f"随机选择的座位为: {select_id}")
-                post_to_get_seat(select_id, segment, config, token_mgr, messages)
+                if post_to_get_seat(select_id, segment, config, token_mgr, messages):
+                    flag = True
             continue
 
         elif config.mode == "3":
             # 模式 3: 随机选择
             select_id = random_get_seat(data)
             logger.info(f"随机选择的座位为: {select_id}")
-            post_to_get_seat(select_id, segment, config, token_mgr, messages)
+            if post_to_get_seat(select_id, segment, config, token_mgr, messages):
+                flag = True
             continue
 
         elif config.mode == "4":
@@ -196,7 +199,8 @@ def select_seat(build_id, segment, nowday, config, token_mgr, messages):
                     selected_seat = random.choice(available_target_seats)
                     select_id = selected_seat["id"]
                     logger.info(f"从指定座位中选择的座位为: {selected_seat['no']} (系统ID: {select_id})")
-                post_to_get_seat(select_id, segment, config, token_mgr, messages)
+                if post_to_get_seat(select_id, segment, config, token_mgr, messages):
+                    flag = True
             else:
                 logger.info("指定座位列表中无可用座位，立即重试")
             continue
