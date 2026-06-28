@@ -80,7 +80,7 @@ class TestPostWithRetry:
         data = {"key": "value"}
         post_with_retry("http://test.com", data, {"h": "v"})
         mock_post.assert_called_once_with(
-            "http://test.com", json=data, headers={"h": "v"}, timeout=120
+            "http://test.com", json=data, headers={"h": "v"}, timeout=15
         )
 
     @patch("api.http.requests.post")

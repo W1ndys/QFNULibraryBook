@@ -36,7 +36,7 @@ def get_seat_info(build_id, segment, nowday, save_file=None):
 
         res = post_with_retry(
             URL_CLASSROOM_SEAT, post_data, DEFAULT_HEADERS,
-            max_retries=100, retry_delay=3
+            max_retries=10, retry_delay=1, timeout=15
         )
 
         # 保存为 JSON 文件

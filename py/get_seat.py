@@ -91,7 +91,8 @@ def post_to_get_seat(select_id, segment, config, token_mgr, messages):
     request_headers = {**DEFAULT_HEADERS, "Authorization": auth_token}
 
     try:
-        seat_result = post_with_retry(URL_GET_SEAT, post_data, request_headers)
+        seat_result = post_with_retry(URL_GET_SEAT, post_data, request_headers,
+                                     max_retries=10, retry_delay=1, timeout=15)
     except RequestFailed:
         messages.append("\n超过最大重试次数,请求失败。")
         title = f"脚本执行通知 - 学号: {config.username}"

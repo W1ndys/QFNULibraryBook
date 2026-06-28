@@ -36,7 +36,7 @@ def go_home(config: AppConfig, token_mgr: TokenManager):
                     "Authorization": auth_token,
                 }
                 try:
-                    res = post_with_retry(URL_CHECK_OUT, post_data, request_headers, max_retries=20)
+                    res = post_with_retry(URL_CHECK_OUT, post_data, request_headers, max_retries=10, retry_delay=1, timeout=15)
                 except RequestFailed:
                     logger.error("签退请求失败，超过最大重试次数")
                     send_message(config, "\n超过最大重试次数,请求失败。", "图书馆签退通知")

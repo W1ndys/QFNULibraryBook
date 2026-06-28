@@ -14,7 +14,7 @@ class RequestFailed(Exception):
     pass
 
 
-def post_with_retry(url, data, headers, max_retries=100, retry_delay=0, timeout=120):
+def post_with_retry(url, data, headers, max_retries=10, retry_delay=1, timeout=15):
     """
     带重试的 POST 请求。
 
@@ -22,9 +22,9 @@ def post_with_retry(url, data, headers, max_retries=100, retry_delay=0, timeout=
         url: 请求 URL
         data: JSON 请求体（字典）
         headers: 请求头
-        max_retries: 最大重试次数
-        retry_delay: 重试间隔秒数
-        timeout: 请求超时秒数
+        max_retries: 最大重试次数（默认 10）
+        retry_delay: 重试间隔秒数（默认 1s）
+        timeout: 请求超时秒数（默认 15s）
 
     返回:
         解析后的 JSON 响应（字典）

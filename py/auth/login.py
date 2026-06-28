@@ -33,42 +33,42 @@ _referer = _login_url
 # ==================== 滑块验证码 ====================
 
 def _detect_gap_opencv(bg, slider):
-    """使用 OpenCV 边缘检测 + 模板匹配定位滑块缺口"""
-    bg_gray = cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY)
-    slider_gray = cv2.cvtColor(slider, cv2.COLOR_BGR2GRAY)
+    """使用 CLAHE 预处理 + 多分辨率模板匹配定位滑块缺口"""
+    # CLAHE 自适应直方图均衡化 — 提升低对比度图片匹配效果
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
 
-    bg_edge = cv2.Canny(bg_gray, 50, 150)
-    slider_edge = cv2.Canny(slider_gray, 50, 150)
+    bg_gray = clahe.apply(cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY))
+    slider_gray = clahe.apply(cv2.cvtColor(slider, cv2.COLOR_BGR2GRAY))
 
-    # 边缘匹配
-    best_edge_x = 0
-    best_edge_score = -1
-    for width in [slider.shape[1], 80, 75, 70, 65, 60]:
+    bg_edge = cv2.Canny(bg_gray, 30, 120)
+    slider_edge = cv2.Canny(slider_gray, 30, 120)
+
+    best_x = 0
+    best_score = -1
+
+    # 多尺度边缘匹配
+    for width in [slider.shape[1], 75, 65, 55]:
         if width > slider_edge.shape[1]:
             continue
         puzzle = slider_edge[:, :width]
         result = cv2.matchTemplate(bg_edge, puzzle, cv2.TM_CCOEFF_NORMED)
-        _, max_val, max_loc, _ = cv2.minMaxLoc(result)
-        if max_val > best_edge_score:
-            best_edge_score = max_val
-            best_edge_x = max_loc[0]
+        _, max_val, _, max_loc = cv2.minMaxLoc(result)
+        if max_val > best_score:
+            best_score = max_val
+            best_x = max_loc[0]
 
-    # 灰度匹配
-    best_gray_x = 0
-    best_gray_score = -1
-    for width in [slider.shape[1], 80, 75, 70, 65, 60]:
+    # 多尺度灰度匹配（CLAHE 增强后）
+    for width in [slider.shape[1], 75, 65, 55]:
         if width > slider_gray.shape[1]:
             continue
         puzzle = slider_gray[:, :width]
-        result = cv2.matchTemplate(bg_gray, puzzle, cv2.TM_CCORR_NORMED)
-        _, max_val, max_loc, _ = cv2.minMaxLoc(result)
-        if max_val > best_gray_score:
-            best_gray_score = max_val
-            best_gray_x = max_loc[0]
+        result = cv2.matchTemplate(bg_gray, puzzle, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(result)
+        if max_val > best_score:
+            best_score = max_val
+            best_x = max_loc[0]
 
-    if best_edge_score > best_gray_score:
-        return best_edge_x, best_edge_score
-    return best_gray_x, best_gray_score
+    return best_x, best_score
 
 
 def _detect_gap(bg, slider):
@@ -129,8 +129,8 @@ def _generate_human_tracks(distance):
     return tracks
 
 
-def _solve_slider_captcha(session, headers, max_attempts=300):
-    """破解滑块验证码，三阶段搜索策略"""
+def _solve_slider_captcha(session, headers, max_attempts=100):
+    """破解滑块验证码，自适应搜索策略（含 CLAHE 反馈修正）"""
     logger.info("获取滑块验证码...")
 
     try:
@@ -166,17 +166,17 @@ def _solve_slider_captcha(session, headers, max_attempts=300):
         verify_api = f"{IDS_URL}/authserver/common/verifySliderCaptcha.htl"
 
         base_gap = int(detected_gap)
+        # 自适应搜索：中心值 → ±8 小范围 → ±20 中范围
         search_phases = [
-            ([base_gap], 1, "中心值"),
-            (list(range(max(20, base_gap - 15), min(260, base_gap + 15) + 1, 1)), 1, "近邻±15"),
-            (list(range(20, 261, 1)), 1, "全域步长1"),
+            ([base_gap], "中心值"),
+            (list(range(max(20, base_gap - 8), min(260, base_gap + 8) + 1, 1)), "近邻±8"),
+            (list(range(max(20, base_gap - 20), min(260, base_gap + 20) + 1, 2)), "扩展±20步长2"),
         ]
 
         total_attempts = 0
         tried_gaps = set()
 
-        for gap_list, step, phase_name in search_phases:
-            phase_attempts = 0
+        for gap_list, phase_name in search_phases:
             for gap in gap_list:
                 if gap in tried_gaps:
                     continue
@@ -186,7 +186,6 @@ def _solve_slider_captcha(session, headers, max_attempts=300):
 
                 tried_gaps.add(gap)
                 total_attempts += 1
-                phase_attempts += 1
 
                 tracks = _generate_human_tracks(gap)
                 verify_data = {
@@ -216,10 +215,6 @@ def _solve_slider_captcha(session, headers, max_attempts=300):
                         f"验证成功! gap={gap}, 阶段={phase_name}, 总尝试={total_attempts}"
                     )
                     return True
-
-            logger.debug(
-                f"{phase_name}完成: 尝试{phase_attempts}次, 累计{total_attempts}次"
-            )
 
         logger.error(f"所有验证尝试失败 (共{total_attempts}次)")
         return False
@@ -260,19 +255,19 @@ def _check_need_captcha(session, headers, username):
 
 
 def _do_solve_slider_captcha(session, headers):
-    """执行滑块验证码验证，最多尝试 10 轮"""
+    """执行滑块验证码验证，最多尝试 5 轮"""
     logger.info("开始滑块验证码验证...")
 
     slider_url = f"{IDS_URL}/authserver/common/toSliderCaptcha.htl"
     session.get(slider_url, headers=headers, timeout=30)
 
-    for attempt in range(10):
-        logger.info(f"滑块验证码尝试 {attempt + 1}/10")
+    for attempt in range(5):
+        logger.info(f"滑块验证码尝试 {attempt + 1}/5")
         result = _solve_slider_captcha(session, headers)
         if result:
             logger.info("滑块验证码验证成功")
             return True
-        time.sleep(0.3)
+        time.sleep(0.5)
 
     logger.error("滑块验证码验证失败，所有尝试均失败")
     return False

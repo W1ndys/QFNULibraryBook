@@ -4,7 +4,6 @@
 """
 import logging
 import sys
-import time
 from datetime import datetime, timedelta
 
 import requests
@@ -56,7 +55,7 @@ def get_segment(build_id, nowday):
         post_data = {"build_id": build_id}
         res = post_with_retry(
             URL_CLASSROOM_DETAIL_INFO, post_data, DEFAULT_HEADERS,
-            max_retries=100, retry_delay=3
+            max_retries=10, retry_delay=1, timeout=15
         )
         segment = None
         for item in res["data"]:
@@ -79,7 +78,7 @@ def get_member_seat(auth):
         request_headers = {**DEFAULT_HEADERS, "Authorization": auth}
         res = post_with_retry(
             URL_CHECK_STATUS, post_data, request_headers,
-            max_retries=100, retry_delay=3
+            max_retries=10, retry_delay=1, timeout=15
         )
         return res
     except RequestFailed:
@@ -92,45 +91,22 @@ def get_member_seat(auth):
 
 def get_seat_info(build_id, segment, nowday):
     """获取指定教室的空闲座位列表"""
-    try:
-        while True:
-            try:
-                post_data = {
-                    "area": build_id,
-                    "segment": segment,
-                    "day": nowday,
-                    "startTime": "08:00",
-                    "endTime": "22:00",
-                }
-                res = post_with_retry(
-                    URL_CLASSROOM_SEAT, post_data, DEFAULT_HEADERS,
-                    max_retries=100, retry_delay=3
-                )
-                free_seats = []
-                for seat in res["data"]:
-                    if seat["status_name"] == "空闲":
-                        free_seats.append({"id": seat["id"], "no": seat["no"]})
-                time.sleep(1)
-                return free_seats
-
-            except requests.exceptions.Timeout:
-                logger.warning("请求超时，正在重试...")
-
-            except RequestFailed:
-                logger.error("获取座位信息失败，超过最大重试次数")
-                sys.exit()
-
-            except Exception as e:
-                logger.error(f"获取座位信息异常: {e}")
-                sys.exit()
-
-            time.sleep(1)
-
-    except KeyboardInterrupt:
-        logger.info("主动停止程序")
-    except Exception as e:
-        logger.error(f"循环异常: {e}")
-        sys.exit()
+    post_data = {
+        "area": build_id,
+        "segment": segment,
+        "day": nowday,
+        "startTime": "08:00",
+        "endTime": "22:00",
+    }
+    res = post_with_retry(
+        URL_CLASSROOM_SEAT, post_data, DEFAULT_HEADERS,
+        max_retries=10, retry_delay=1, timeout=15
+    )
+    free_seats = []
+    for seat in res["data"]:
+        if seat["status_name"] == "空闲":
+            free_seats.append({"id": seat["id"], "no": seat["no"]})
+    return free_seats
 
 
 if __name__ == "__main__":
