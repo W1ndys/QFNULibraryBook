@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Documentation (except deployment guide)
+*.md
+!DEPLOY.md
+
+# Docker artifacts
+*.tar
+*.tar.gz
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Old versions and alternatives
+old_py/
+v3/
+v3.1/
+
+# Logs
+*.log
+
+# Claude
+.claude/

@@ -1,10 +1,33 @@
+# Git
+.git
+.gitignore
+
 # Python
 __pycache__/
 *.pyc
 *.pyo
-*.egg-info/
-dist/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Node.js
 node_modules/
@@ -16,9 +39,14 @@ package.json
 .vscode/
 *.swp
 *.swo
+*~
 
 # Test
 .pytest_cache/
+
+# Configuration files with sensitive data
+py/config.yml
+config.yml
 
 # OS
 .DS_Store
@@ -32,3 +60,11 @@ debug_*.jpg
 src/debug_captcha/
 web/flask_session/
 web/static/logo.png
+
+# Logs
+*.log
+
+# Docker artifacts
+*.tar
+*.tar.gz
+docker-compose.override.yml
