@@ -1,4 +1,6 @@
-# QFNULibraryBook
+# QFNULibraryBook Template
+
+> 这是一个 **GitHub 模板仓库**。点击仓库首页绿色的 **Use this template** 按钮即可一键创建你自己的副本。
 
 曲阜师范大学图书馆座位自动预约程序
 
@@ -40,9 +42,30 @@
 
 2. 编辑 `configs/studentA.yml`，填入你的学号和密码：
    ```yaml
-   USERNAME: "2023xxxxxx"
-   PASSWORD: "your_password"
+   USERNAME: "你的学号"
+   PASSWORD: "你的密码"
    ```
+
+### 在 Trae Solo 终端中直接运行
+
+在 Trae Solo 的终端中输入以下命令即可：
+
+**签到：**
+```bash
+python src/check_in.py -c configs/studentA.yml
+```
+
+**签退：**
+```bash
+python src/sign_out.py -c configs/studentA.yml
+```
+
+**预约座位：**
+```bash
+python src/get_seat.py -c configs/studentA.yml
+```
+
+整个过程无需打开浏览器、无需手动输入验证码，Trae Solo 会自动完成滑块破解和登录认证，输出结果一目了然。
 
 ### 在 Trae Solo 终端中直接运行
 
