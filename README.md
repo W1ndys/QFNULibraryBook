@@ -31,62 +31,6 @@
 
 ## 如何使用 Trae Solo 自动签退签到
 
-> **场景**：在图书馆学习时，每次都要手动打开浏览器签到签退很麻烦。以下是使用 Trae Solo（或其他 Claude Code 客户端）一键完成的方法。
-
-### 准备工作
-
-1. 确保已安装依赖：
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. 编辑 `configs/studentA.yml`，填入你的学号和密码：
-   ```yaml
-   USERNAME: "你的学号"
-   PASSWORD: "你的密码"
-   ```
-
-### 在 Trae Solo 终端中直接运行
-
-在 Trae Solo 的终端中输入以下命令即可：
-
-**签到：**
-```bash
-python src/check_in.py -c configs/studentA.yml
-```
-
-**签退：**
-```bash
-python src/sign_out.py -c configs/studentA.yml
-```
-
-**预约座位：**
-```bash
-python src/get_seat.py -c configs/studentA.yml
-```
-
-整个过程无需打开浏览器、无需手动输入验证码，Trae Solo 会自动完成滑块破解和登录认证，输出结果一目了然。
-
-### 在 Trae Solo 终端中直接运行
-
-在 Trae Solo 的终端中输入以下命令即可：
-
-**签到：**
-```bash
-python src/check_in.py -c configs/studentA.yml
-```
-
-**签退：**
-```bash
-python src/sign_out.py -c configs/studentA.yml
-```
-
-**预约座位：**
-```bash
-python src/get_seat.py -c configs/studentA.yml
-```
-
-整个过程无需打开浏览器、无需手动输入验证码，Trae Solo 会自动完成滑块破解和登录认证，输出结果一目了然。
 
 ### 推送通知配置（可选）
 
@@ -181,9 +125,6 @@ scripts/            # 工具和探测脚本
 web/                # Flask Web 应用
 ```
 
-## CI/CD
-
-此前已通过 GitHub Actions 自动执行签到和签退（已移除），当前可手动运行。
 
 ## 贡献者
 
