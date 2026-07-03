@@ -25,7 +25,57 @@
 - **滑块验证码破解**：OpenCV 边缘检测 + 三阶段搜索策略
 - **多渠道通知**：钉钉、Telegram、Bark、AnPush
 - **多用户支持**：通过 `-c` 参数指定不同配置文件
-- **CI/CD**：GitHub Actions 定时签到签退
+- **Web 控制面板**：浏览器登录后一键签到/签退
+
+## 如何使用 Trae Solo 自动签退签到
+
+> **场景**：在图书馆学习时，每次都要手动打开浏览器签到签退很麻烦。以下是使用 Trae Solo（或其他 Claude Code 客户端）一键完成的方法。
+
+### 准备工作
+
+1. 确保已安装依赖：
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. 编辑 `configs/studentA.yml`，填入你的学号和密码：
+   ```yaml
+   USERNAME: "2023xxxxxx"
+   PASSWORD: "your_password"
+   ```
+
+### 在 Trae Solo 终端中直接运行
+
+在 Trae Solo 的终端中输入以下命令即可：
+
+**签到：**
+```bash
+python src/check_in.py -c configs/studentA.yml
+```
+
+**签退：**
+```bash
+python src/sign_out.py -c configs/studentA.yml
+```
+
+**预约座位：**
+```bash
+python src/get_seat.py -c configs/studentA.yml
+```
+
+整个过程无需打开浏览器、无需手动输入验证码，Trae Solo 会自动完成滑块破解和登录认证，输出结果一目了然。
+
+### 推送通知配置（可选）
+
+如果需要签到/签退后收到通知，在配置文件中设置：
+
+```yaml
+PUSH_METHOD: "DD"        # 钉钉
+DD_BOT_TOKEN: "你的token"
+DD_BOT_SECRET: "你的secret"
+```
+
+支持钉钉（`DD`）、Telegram（`TG`）、Bark（`BARK`）、AnPush（`ANPUSH`）四种渠道。
 
 ## 快速开始
 
@@ -40,7 +90,7 @@ pip install -r requirements.txt
 编辑 `configs/template.yml`（模板）或创建 `configs/studentX.yml`（多用户），填入：
 
 - `USERNAME` / `PASSWORD`：学号和密码
-- `PUSH_METHOD`：通知方式（`TG` / `DD` / `BARK` / `ANPUSH`）
+- `PUSH_METHOD`：通知方式（`TG` / `DD` / `BARK` / `ANPUSH`，留空则不推送）
 - 对应通知渠道的 token/密钥
 - `CLASSROOMS_NAME`：要预约的自习室列表
 - `MODE`：选座模式（1-4）
@@ -57,6 +107,9 @@ python src/check_in.py -c configs/studentA.yml
 
 # 签退
 python src/sign_out.py -c configs/studentA.yml
+
+# 多用户并发
+python scripts/run_all.py seat -u configs/users.yml
 
 # 管理员：抓取座位信息快照
 python src/get_seat_info_ForAdmin.py -c configs/template.yml --classrooms "东校区图书馆-三楼自修区"
@@ -99,12 +152,13 @@ src/
 ├── check_in.py     # 签到入口
 ├── sign_out.py     # 签退入口
 └── get_info.py     # 座位查询工具
+configs/            # 用户 YAML 配置文件
 data/seat_info/     # 教室座位布局快照
-.github/workflows/  # CI 定时任务
+scripts/            # 工具和探测脚本
+web/                # Flask Web 应用
 ```
 
-CI/CD
------
+## CI/CD
 
 此前已通过 GitHub Actions 自动执行签到和签退（已移除），当前可手动运行。
 
