@@ -63,15 +63,15 @@ class TestFromYaml:
             AppConfig.from_yaml("/nonexistent/path/config.yml")
 
     def test_none_uses_default_path(self):
-        """None 路径解析到 py/ 目录下的 config.yml"""
-        # from_yaml(None) 会尝试打开 py/config.yml
+        """None 路径解析到项目根目录下的 configs/template.yml"""
+        # from_yaml(None) 会尝试打开 configs/template.yml
         # 如果该文件存在则正常加载，否则抛 FileNotFoundError
         try:
             cfg = AppConfig.from_yaml(None)
             # 如果存在，验证加载成功
             assert isinstance(cfg, AppConfig)
         except FileNotFoundError:
-            # py/config.yml 不存在时预期行为
+            # configs/template.yml 不存在时预期行为
             pass
 
     def test_absolute_path(self, tmp_path):

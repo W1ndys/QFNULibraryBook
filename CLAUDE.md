@@ -13,13 +13,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pip install -r requirements.txt
 
 # 预约座位
-python py/get_seat.py -c config_studentA.yml
+python py/get_seat.py -c configs/studentA.yml
 
 # 签到
-python py/check_in.py -c config_studentA.yml
+python py/check_in.py -c configs/studentA.yml
 
 # 签退
-python py/sign_out.py -c config_studentA.yml
+python py/sign_out.py -c configs/studentA.yml
+
+# 多用户并发
+python scripts/run_all.py seat -u configs/users.yml
 
 # 管理员：抓取座位信息
 python py/get_seat_info_ForAdmin.py
@@ -31,7 +34,17 @@ python py/get_seat_info_ForAdmin.py
 
 ### 目录结构
 
-```
+```yaml
+configs/                  # 用户级 YAML 配置文件
+  - studentA.yml          # 学生 A 配置
+  - studentB.yml          # 学生 B 配置
+  - template.yml          # 配置模板（原 py/config.yml）
+  - users.yml             # 多用户管理配置
+scripts/                  # 工具/探测脚本
+  - run_all.py            # 多用户并发入口
+  - performance_probe.py  # API 性能探测
+  - time_window_test.py   # 预约窗口测试
+  - performance_results.json
 py/
 ├── auth/               # 登录 + Token 管理
 │   ├── login.py        # IDS CAS 登录 + 滑块验证码 + Bearer Token 获取
@@ -44,6 +57,7 @@ py/
 │   └── aes.py          # 统一 AES 加密（仅 pycryptodome）
 ├── api/
 │   ├── constants.py    # API URL 和默认请求头
+│   ├── exceptions.py   # 自定义异常
 │   └── http.py         # 带重试的 HTTP 请求工具
 ├── classrooms.py       # 教室映射 + EXCLUDE_ID
 ├── get_seat.py         # 入口：预约
@@ -101,6 +115,6 @@ GitHub Actions 两个工作流定时执行：
 ## Key Technical Details
 
 - **AES 加密统一使用 pycryptodome**：`py/crypto/aes.py` 提供 `encrypt_seat_data()`（日期回文密钥）和 `encrypt_login_data()`（随机前缀 + 随机 IV）。
-- **配置管理**：`py/config/config.py` 的 `AppConfig` 数据类替代全局变量，通过 `AppConfig.from_yaml(config_file)` 加载。配置文件位于 `py/` 目录下。
+- **配置管理**：`py/config/config.py` 的 `AppConfig` 数据类替代全局变量，通过 `AppConfig.from_yaml(config_file)` 加载。用户配置文件位于 `configs/` 目录下；Python 配置模块在 `py/config/`。
 - **座位数据**：`json/seat_info/` 下的 JSON 文件为静态座位布局快照，由 `get_seat_info_ForAdmin.py` 生成。
 - **提交规范**：遵循宽松的 conventional commit 风格（`feat:`、`fix:`、`ci:`、`refactor:`、`chore:`、`docs:`）。

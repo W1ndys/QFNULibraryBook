@@ -1,6 +1,6 @@
 """
 管理员工具：抓取教室座位信息并保存为 JSON 文件
-用法: python get_seat_info_ForAdmin.py [-c config.yml]
+用法: python get_seat_info_ForAdmin.py [-c configs/template.yml]
 """
 import argparse
 import json
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="管理员工具：抓取教室座位信息")
-    parser.add_argument("-c", "--config", help="指定配置文件路径，默认为 config.yml")
+    parser.add_argument("-c", "--config", help="指定配置文件路径，默认为 configs/template.yml")
     parser.add_argument("--classrooms", nargs="+", help="指定教室名称列表，覆盖配置文件")
     parser.add_argument("--date", choices=["today", "tomorrow"], help="指定日期，覆盖配置文件")
     args = parser.parse_args()

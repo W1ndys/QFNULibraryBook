@@ -24,5 +24,5 @@ jobs:
 
       - name: 运行签到脚本
         run: |
-          python py/check_in.py -c config_studentA.yml
-          python py/check_in.py -c config_studentB.yml
+          python py/check_in.py -c configs/studentA.yml
+          python py/check_in.py -c configs/studentB.yml

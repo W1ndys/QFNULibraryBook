@@ -1,6 +1,6 @@
 """
 图书馆签到脚本
-用法: python check_in.py [-c config_studentA.yml]
+用法: python check_in.py [-c configs/studentA.yml]
 """
 import argparse
 import json
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="图书馆签到脚本")
-    parser.add_argument("-c", "--config", help="指定配置文件路径，默认为 config.yml")
+    parser.add_argument("-c", "--config", help="指定配置文件路径，默认为 configs/template.yml")
     args = parser.parse_args()
 
     try:

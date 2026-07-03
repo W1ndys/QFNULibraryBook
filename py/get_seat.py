@@ -1,6 +1,6 @@
 """
 图书馆座位预约脚本
-用法: python get_seat.py [-c config_studentA.yml]
+用法: python get_seat.py [-c configs/studentA.yml]
 """
 import argparse
 import logging
@@ -249,7 +249,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="图书馆座位预约脚本")
-    parser.add_argument("-c", "--config", help="指定配置文件路径，默认为 config.yml")
+    parser.add_argument("-c", "--config", help="指定配置文件路径，默认为 configs/template.yml")
     args = parser.parse_args()
 
     try:
