@@ -10,7 +10,7 @@ import pytest
 from classrooms import classroom_id_mapping
 
 # JSON 数据文件目录
-SEAT_INFO_DIR = os.path.join(os.path.dirname(__file__), "..", "json", "seat_info")
+SEAT_INFO_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "seat_info")
 
 
 @pytest.fixture

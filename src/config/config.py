@@ -40,21 +40,21 @@ class AppConfig:
 
         参数:
             config_file: 配置文件路径。None 使用默认 configs/template.yml，
-                        相对路径基于项目根目录解析（不存在则回退到 py/ 目录），绝对路径直接使用。
+                        相对路径基于项目根目录解析（不存在则回退到 src/ 目录），绝对路径直接使用。
         """
-        current_dir = os.path.dirname(os.path.abspath(__file__))  # py/config/
-        py_dir = os.path.dirname(current_dir)                      # py/
-        project_root = os.path.dirname(py_dir)                      # 项目根目录
+        current_dir = os.path.dirname(os.path.abspath(__file__))  # src/config/
+        src_dir = os.path.dirname(current_dir)                     # src/
+        project_root = os.path.dirname(src_dir)                     # 项目根目录
 
         if config_file is None:
             config_path = os.path.join(project_root, "configs", "template.yml")
         elif os.path.isabs(config_file):
             config_path = config_file
         else:
-            # 优先从项目根目录解析；如不存在则回退到 py/ 目录（过渡兼容）
+            # 优先从项目根目录解析；如不存在则回退到 src/ 目录（过渡兼容）
             config_path = os.path.join(project_root, config_file)
             if not os.path.exists(config_path):
-                config_path = os.path.join(py_dir, config_file)
+                config_path = os.path.join(src_dir, config_file)
 
         with open(config_path, "r", encoding="utf-8") as f:
             raw = yaml.safe_load(f)

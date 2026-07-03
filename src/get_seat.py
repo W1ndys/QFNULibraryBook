@@ -170,8 +170,16 @@ def select_seat(build_id, segment, nowday, config, token_mgr, messages):
             if data:
                 logger.info(f"调试: 实际返回的前5个座位: {data[:5]}")
 
-            target_seats = ["228"]
-            priority_seats = ["228"]
+            # 从配置文件 SEAT_ID 读取目标座位号，第一个为优先选择
+            target_seats_raw = config.seat_id
+            target_seats_flat = []
+            for item in target_seats_raw:
+                if isinstance(item, list):
+                    target_seats_flat.extend(item)
+                else:
+                    target_seats_flat.append(item)
+            target_seats = [str(s) for s in target_seats_flat]
+            priority_seats = target_seats[:1] if target_seats else []
 
             available_target_seats = []
             for seat in data:

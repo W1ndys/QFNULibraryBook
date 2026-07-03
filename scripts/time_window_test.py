@@ -14,8 +14,8 @@ from datetime import datetime
 
 import requests
 
-# 添加 py/ 目录到路径，使脚本可从 scripts/ 目录独立运行
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "py"))
+# 添加 src/ 目录到路径，使脚本可从 scripts/ 目录独立运行
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from config.config import AppConfig
 from auth.token import TokenManager, AuthenticationError

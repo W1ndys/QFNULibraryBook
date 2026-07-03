@@ -29,4 +29,6 @@ tmp_*.png
 tmp_*.jpg
 debug_*.png
 debug_*.jpg
-debug_captcha/
+src/debug_captcha/
+web/flask_session/
+web/static/logo.png
