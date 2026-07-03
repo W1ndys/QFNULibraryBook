@@ -17,6 +17,9 @@ package.json
 *.swp
 *.swo
 
+# Test
+.pytest_cache/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -26,3 +29,4 @@ tmp_*.png
 tmp_*.jpg
 debug_*.png
 debug_*.jpg
+debug_captcha/
