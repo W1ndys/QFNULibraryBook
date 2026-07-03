@@ -8,6 +8,7 @@ import pytest
 
 from check_in import lib_rsv
 from auth.token import AuthenticationError
+from api.exceptions import CheckInFailed
 
 
 class TestLibRsv:
@@ -72,8 +73,8 @@ class TestLibRsv:
         assert "签到失败" in call_args[1]
 
     def test_auth_error_exits(self, sample_config):
-        """认证失败 → sys.exit()"""
+        """认证失败 → CheckInFailed"""
         mock_mgr = MagicMock()
         mock_mgr.get_token.side_effect = AuthenticationError("认证失败")
-        with pytest.raises(SystemExit):
+        with pytest.raises(CheckInFailed):
             lib_rsv(sample_config, mock_mgr)

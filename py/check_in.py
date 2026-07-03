@@ -5,7 +5,6 @@
 import argparse
 import json
 import logging
-import sys
 
 import requests
 
@@ -13,6 +12,7 @@ from config.config import AppConfig
 from auth.token import TokenManager, AuthenticationError
 from notify.notify import send_message
 from api.constants import URL_CHECK_IN
+from api.exceptions import CheckInFailed
 from crypto.aes import encrypt_seat_data
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def lib_rsv(config: AppConfig, token_mgr: TokenManager):
         bearer_token = token_mgr.get_token()
     except AuthenticationError as e:
         logger.error(str(e))
-        sys.exit()
+        raise CheckInFailed(str(e)) from e
 
     sub_headers = {
         "User-Agent": (
@@ -33,11 +33,11 @@ def lib_rsv(config: AppConfig, token_mgr: TokenManager):
             "Chrome/117.0.5938.63 Safari/537.36"
         ),
         "Content-Type": "application/json",
-        "authorization": bearer_token,
+        "Authorization": bearer_token,
     }
     sub_data = {
         "aesjson": encrypt_seat_data('{"method":"checkin"}'),
-        "authorization": bearer_token,
+        "Authorization": bearer_token,
     }
 
     session = requests.session()

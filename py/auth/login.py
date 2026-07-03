@@ -10,6 +10,7 @@ import base64
 import json
 import logging
 import random
+import os
 import re
 import time
 
@@ -33,42 +34,65 @@ _referer = _login_url
 # ==================== 滑块验证码 ====================
 
 def _detect_gap_opencv(bg, slider):
-    """使用 CLAHE 预处理 + 多分辨率模板匹配定位滑块缺口"""
-    # CLAHE 自适应直方图均衡化 — 提升低对比度图片匹配效果
+    """提取滑块图形 + 多策略匹配（边缘、逆像、ROI）定位缺口"""
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-
     bg_gray = clahe.apply(cv2.cvtColor(bg, cv2.COLOR_BGR2GRAY))
     slider_gray = clahe.apply(cv2.cvtColor(slider, cv2.COLOR_BGR2GRAY))
 
-    bg_edge = cv2.Canny(bg_gray, 30, 120)
-    slider_edge = cv2.Canny(slider_gray, 30, 120)
+    # 提取滑块实际图形区域（非黑色像素包围盒）
+    piece_mask = slider_gray > 15
+    cols = np.any(piece_mask, axis=0)
+    rows = np.any(piece_mask, axis=1)
+    if not np.any(cols) or not np.any(rows):
+        return 140, 0
+    c_start = np.argmax(cols)
+    c_end = len(cols) - np.argmax(cols[::-1])
+    r_start = np.argmax(rows)
+    r_end = len(rows) - np.argmax(rows[::-1])
+    piece = slider_gray[r_start:r_end, c_start:c_end]
 
-    best_x = 0
-    best_score = -1
+    # 多种匹配策略
+    candidates = []
 
-    # 多尺度边缘匹配
-    for width in [slider.shape[1], 75, 65, 55]:
-        if width > slider_edge.shape[1]:
-            continue
-        puzzle = slider_edge[:, :width]
-        result = cv2.matchTemplate(bg_edge, puzzle, cv2.TM_CCOEFF_NORMED)
+    # 策略 1: 逆像匹配（滑块图黑底亮块 → 背景图暗缺口对齐）
+    bg_inv = (255 - bg_gray).astype(np.float32)
+    piece_inv = (255 - piece).astype(np.float32)
+    for method, label in [(cv2.TM_CCOEFF_NORMED, "inv_ccoeff"),
+                           (cv2.TM_CCORR_NORMED, "inv_ccorr")]:
+        result = cv2.matchTemplate(bg_inv, piece_inv, method)
         _, max_val, _, max_loc = cv2.minMaxLoc(result)
-        if max_val > best_score:
-            best_score = max_val
-            best_x = max_loc[0]
+        candidates.append((max_loc[0] + c_start, max_val, label))
 
-    # 多尺度灰度匹配（CLAHE 增强后）
-    for width in [slider.shape[1], 75, 65, 55]:
-        if width > slider_gray.shape[1]:
-            continue
-        puzzle = slider_gray[:, :width]
-        result = cv2.matchTemplate(bg_gray, puzzle, cv2.TM_CCOEFF_NORMED)
+    # 策略 2: 裁剪后灰度直接匹配（不逆像）
+    bg_f = bg_gray.astype(np.float32)
+    piece_f = piece.astype(np.float32)
+    for method, label in [(cv2.TM_CCOEFF_NORMED, "gray_ccoeff")]:
+        result = cv2.matchTemplate(bg_f, piece_f, method)
         _, max_val, _, max_loc = cv2.minMaxLoc(result)
-        if max_val > best_score:
-            best_score = max_val
-            best_x = max_loc[0]
+        candidates.append((max_loc[0] + c_start, max_val, label))
 
-    return best_x, best_score
+    # 策略 3: 较宽松边缘（Canny 40-130）匹配
+    bg_edge = cv2.Canny(bg_gray, 40, 130)
+    piece_edge = cv2.Canny(piece, 40, 130)
+    if np.count_nonzero(piece_edge) > 10:
+        result = cv2.matchTemplate(bg_edge, piece_edge, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(result)
+        candidates.append((max_loc[0] + c_start, max_val, "cedge_ccoeff"))
+
+    if not candidates:
+        return 140, 0
+
+    # 逆像和逆像相关系数优先，取中位数
+    inv_candidates = [c for c in candidates if c[2].startswith("inv_")]
+    if inv_candidates:
+        xs = sorted([c[0] for c in inv_candidates])
+        best_x = xs[len(xs) // 2]
+        best_score = max(c[1] for c in inv_candidates)
+    else:
+        best = max(candidates, key=lambda c: c[1])
+        best_x, best_score = best[0], best[1]
+
+    return int(best_x), best_score
 
 
 def _detect_gap(bg, slider):
@@ -76,6 +100,7 @@ def _detect_gap(bg, slider):
     opencv_gap, score = _detect_gap_opencv(bg, slider)
     bg_width = bg.shape[1]
     scale = 280 / bg_width
+    logger.debug(f"原始x={opencv_gap}, 分数={score:.4f}, 缩放={scale:.4f}")
     return opencv_gap * scale
 
 
@@ -129,8 +154,8 @@ def _generate_human_tracks(distance):
     return tracks
 
 
-def _solve_slider_captcha(session, headers, max_attempts=100):
-    """破解滑块验证码，自适应搜索策略（含 CLAHE 反馈修正）"""
+def _solve_slider_captcha(session, headers, max_attempts=300):
+    """破解滑块验证码：检测引导 + 全域覆盖 + 反向校验"""
     logger.info("获取滑块验证码...")
 
     try:
@@ -160,60 +185,60 @@ def _solve_slider_captcha(session, headers, max_attempts=100):
             logger.error("图片解码失败")
             return False
 
+        # 调试保存
+        try:
+            debug_dir = os.path.join(os.path.dirname(__file__), "..", "debug_captcha")
+            os.makedirs(debug_dir, exist_ok=True)
+            ts = int(time.time())
+            cv2.imwrite(os.path.join(debug_dir, f"bg_{ts}.png"), bg)
+            cv2.imwrite(os.path.join(debug_dir, f"slider_{ts}.png"), slider)
+        except Exception:
+            pass
+
         detected_gap = _detect_gap(bg, slider)
-        logger.info(f"缺口检测: 显示x={detected_gap:.2f}")
+        logger.info(f"缺口检测: 显示x={detected_gap:.2f} (bg={bg.shape[1]}x{bg.shape[0]})")
 
         verify_api = f"{IDS_URL}/authserver/common/verifySliderCaptcha.htl"
-
         base_gap = int(detected_gap)
-        # 自适应搜索：中心值 → ±8 小范围 → ±20 中范围
-        search_phases = [
-            ([base_gap], "中心值"),
-            (list(range(max(20, base_gap - 8), min(260, base_gap + 8) + 1, 1)), "近邻±8"),
-            (list(range(max(20, base_gap - 20), min(260, base_gap + 20) + 1, 2)), "扩展±20步长2"),
-        ]
+
+        # 快速验证函数
+        def _try_gap(gap):
+            tracks = _generate_human_tracks(gap)
+            verify_data = {"canvasLength": 280, "moveLength": gap, "tracks": tracks}
+            encrypted_sign = encrypt_login_data(json.dumps(verify_data), safe_secure)
+            r = session.post(
+                verify_api,
+                data={"sign": encrypted_sign},
+                headers={
+                    **headers,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                timeout=30,
+            )
+            return r.json().get("errorCode") == 1
 
         total_attempts = 0
-        tried_gaps = set()
+        tried = set()
+
+        # 搜索策略
+        search_phases = [
+            ([base_gap], "中心值"),
+            (list(range(max(20, base_gap - 15), min(260, base_gap + 15) + 1, 1)), "近邻±15"),
+            (list(range(20, 261, 2)), "全域步长2"),
+            (list(range(21, 261, 2)), "全域步长2偏移"),
+        ]
 
         for gap_list, phase_name in search_phases:
             for gap in gap_list:
-                if gap in tried_gaps:
-                    continue
+                if gap in tried: continue
                 if total_attempts >= max_attempts:
                     logger.warning(f"已达最大尝试次数 {max_attempts}")
                     return False
+                tried.add(gap); total_attempts += 1
 
-                tried_gaps.add(gap)
-                total_attempts += 1
-
-                tracks = _generate_human_tracks(gap)
-                verify_data = {
-                    "canvasLength": 280,
-                    "moveLength": gap,
-                    "tracks": tracks,
-                }
-                encrypted_sign = encrypt_login_data(
-                    json.dumps(verify_data), safe_secure
-                )
-
-                r = session.post(
-                    verify_api,
-                    data={"sign": encrypted_sign},
-                    headers={
-                        **headers,
-                        "Content-Type": "application/x-www-form-urlencoded",
-                        "X-Requested-With": "XMLHttpRequest",
-                    },
-                    timeout=30,
-                )
-
-                result = r.json()
-
-                if result.get("errorCode") == 1:
-                    logger.info(
-                        f"验证成功! gap={gap}, 阶段={phase_name}, 总尝试={total_attempts}"
-                    )
+                if _try_gap(gap):
+                    logger.info(f"验证成功! gap={gap}, 阶段={phase_name}, 总尝试={total_attempts}")
                     return True
 
         logger.error(f"所有验证尝试失败 (共{total_attempts}次)")
@@ -229,22 +254,29 @@ def _solve_slider_captcha(session, headers, max_attempts=100):
 # ==================== IDS 登录 ====================
 
 def _get_salt_and_execution(session, headers):
-    """从登录页 HTML 中提取 salt 和 execution 参数"""
-    r = session.get(_login_url, headers=headers, timeout=30)
-    html = r.text
+    """从登录页 HTML 中提取 salt 和 execution 参数（最多 3 次重试，间隔 0.5s）"""
+    for attempt in range(3):
+        try:
+            r = session.get(_login_url, headers=headers, timeout=30)
+            html = r.text
 
-    exec_match = re.search(
-        r'name="execution"[^>]*value="([^"]*)"', html, re.IGNORECASE
-    )
-    salt_match = re.search(
-        r'id="pwdEncryptSalt"[^>]*value="([^"]*)"', html, re.IGNORECASE
-    )
+            exec_match = re.search(
+                r'name="execution"[^>]*value="([^"]*)"', html, re.IGNORECASE
+            )
+            salt_match = re.search(
+                r'id="pwdEncryptSalt"[^>]*value="([^"]*)"', html, re.IGNORECASE
+            )
 
-    if not exec_match or not salt_match:
-        logger.error("无法提取登录参数（execution 或 pwdEncryptSalt）")
-        return None, None
+            if exec_match and salt_match:
+                return salt_match.group(1), exec_match.group(1)
+        except Exception as e:
+            logger.warning(f"获取登录页参数失败 (尝试 {attempt+1}/3): {e}")
 
-    return salt_match.group(1), exec_match.group(1)
+        if attempt < 2:
+            time.sleep(0.3)
+
+    logger.error("无法提取登录参数（execution 或 pwdEncryptSalt）")
+    return None, None
 
 
 def _check_need_captcha(session, headers, username):
@@ -267,7 +299,8 @@ def _do_solve_slider_captcha(session, headers):
         if result:
             logger.info("滑块验证码验证成功")
             return True
-        time.sleep(0.5)
+        if attempt < 4:
+            time.sleep(0.1)
 
     logger.error("滑块验证码验证失败，所有尝试均失败")
     return False
@@ -407,6 +440,34 @@ def _get_bearer_token(session, username, password):
 
 # ==================== 公开 API ====================
 
+def _login_with_retry(username: str, password: str, max_retries: int = 3):
+    """
+    登录重试包装器，3 次重试 + 指数退避 (0.5s, 1s, 2s)。
+
+    参数:
+        username: 学号/工号
+        password: 密码
+        max_retries: 最大重试次数（默认 3）
+
+    返回:
+        (name, token) 元组。失败返回 (None, None)。
+    """
+    for attempt in range(max_retries):
+        try:
+            name, token = qfnu_login(username, password)
+            if token is not None:
+                return name, token
+        except Exception as e:
+            logger.warning(f"登录异常 (尝试 {attempt+1}/{max_retries}): {e}")
+
+        if attempt < max_retries - 1:
+            delay = 0.5 * (2 ** attempt)  # 0.5s, 1s, 2s
+            logger.info(f"登录失败，{delay} 秒后重试...")
+            time.sleep(delay)
+
+    return None, None
+
+
 def qfnu_login(username, password):
     """
     曲阜师范大学图书馆登录。
@@ -419,5 +480,5 @@ def qfnu_login(username, password):
         (name, token) 元组。使用时需拼接 "bearer" + token。
         失败返回 (None, None)。
     """
-    session = requests.session()
-    return _get_bearer_token(session, username, password)
+    with requests.session() as session:
+        return _get_bearer_token(session, username, password)

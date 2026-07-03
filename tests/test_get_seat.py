@@ -13,6 +13,7 @@ from get_seat import (
     select_seat,
     run_seat_reservation,
 )
+from api.exceptions import ReservationFailed
 from classrooms import EXCLUDE_ID
 from config.config import AppConfig
 from api.http import RequestFailed
@@ -80,11 +81,11 @@ class TestCheckReservationStatus:
         assert result is False
 
     def test_cancel_success_exits(self, sample_config, fake_token_mgr):
-        """取消成功触发 sys.exit()"""
-        with pytest.raises(SystemExit):
-            check_reservation_status(
-                {"msg": "取消成功"}, sample_config, fake_token_mgr, []
-            )
+        """取消成功返回 True（不再退出）"""
+        result = check_reservation_status(
+            {"msg": "取消成功"}, sample_config, fake_token_mgr, []
+        )
+        assert result is True
 
     def test_unknown_msg(self, sample_config, fake_token_mgr):
         """未知消息返回 True"""
@@ -94,8 +95,8 @@ class TestCheckReservationStatus:
         assert result is True
 
     def test_invalid_input_exits(self, sample_config, fake_token_mgr):
-        """非 dict 输入触发 sys.exit()"""
-        with pytest.raises(SystemExit):
+        """非 dict 输入触发 ReservationFailed"""
+        with pytest.raises(ReservationFailed):
             check_reservation_status(
                 "not a dict", sample_config, fake_token_mgr, []
             )
@@ -159,9 +160,9 @@ class TestSelectSeat:
             {"id": "101", "no": "002"},
         ]
         mock_post.return_value = None
-        # select_seat 循环 100 次后 sys.exit
+        # select_seat 循环 100 次后抛 ReservationFailed
         with patch("get_seat.send_message"):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ReservationFailed):
                 select_seat(16, 999, "2026-06-28", sample_config, fake_token_mgr, [])
         # post_to_get_seat 被调用了
         assert mock_post.call_count >= 1
@@ -180,7 +181,7 @@ class TestSelectSeat:
         mock_post.return_value = None
         # 循环结束后 sys.exit
         with patch("get_seat.send_message"):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ReservationFailed):
                 select_seat(16, 999, "2026-06-28", sample_config, fake_token_mgr, [])
         # 每次调用 post_to_get_seat 时选中的都是 99999（非排除的）
         for call in mock_post.call_args_list:
@@ -199,7 +200,7 @@ class TestSelectSeat:
         ]
         mock_post.return_value = None
         with patch("get_seat.send_message"):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ReservationFailed):
                 select_seat(16, 999, "2026-06-28", sample_config, fake_token_mgr, [])
         # 每次选中的座位 ID 都在 100-102 范围内
         for call in mock_post.call_args_list:
@@ -211,7 +212,7 @@ class TestSelectSeat:
         sample_config.mode = "4"
         mock_seat_info.return_value = [{"id": "100", "no": "228"}]
         with patch("get_seat.send_message"):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ReservationFailed):
                 select_seat(16, 999, "2026-06-28", sample_config, fake_token_mgr, [])
 
     @patch("get_seat.post_to_get_seat")
@@ -225,7 +226,7 @@ class TestSelectSeat:
         ]
         mock_post.return_value = None
         with patch("get_seat.send_message"):
-            with pytest.raises(SystemExit):
+            with pytest.raises(ReservationFailed):
                 select_seat(22, 999, "2026-06-28", sample_config, fake_token_mgr, [])
         # 每次都选中 228 号座位
         for call in mock_post.call_args_list:

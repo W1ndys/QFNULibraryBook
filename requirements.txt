@@ -1,6 +1,6 @@
 requests
 pyyaml
-python-telegram-bot
 pycryptodome
 opencv-python-headless
 numpy
+tenacity

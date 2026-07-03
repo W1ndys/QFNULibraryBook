@@ -3,7 +3,7 @@
 """
 import json
 import logging
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -15,32 +15,43 @@ from notify.notify import send_message, _dingtalk, _send_bark, _send_anpush
 class TestSendMessageDispatch:
     """send_message 根据 push_method 分发到正确后端"""
 
-    @patch("notify.notify.asyncio.run")
-    def test_dispatch_tg(self, mock_run, sample_config):
-        """push_method='TG' 调用 Telegram"""
+    @patch("notify.notify.requests.post")
+    def test_dispatch_tg(self, mock_post, sample_config):
+        """push_method='TG' 调用 Telegram（基于 requests）"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
+
         sample_config.push_method = "TG"
-        send_message(sample_config, "test msg", "title")
-        mock_run.assert_called_once()
+        result = send_message(sample_config, "test msg", "title")
+        assert result is True
+        mock_post.assert_called_once()
 
     @patch("notify.notify._dingtalk")
     def test_dispatch_dd(self, mock_dd, sample_config):
         """push_method='DD' 调用钉钉"""
+        mock_dd.return_value = True
         sample_config.push_method = "DD"
-        send_message(sample_config, "test msg", "title")
+        result = send_message(sample_config, "test msg", "title")
+        assert result is True
         mock_dd.assert_called_once()
 
     @patch("notify.notify._send_bark")
     def test_dispatch_bark(self, mock_bark, sample_config):
         """push_method='BARK' 调用 Bark"""
+        mock_bark.return_value = True
         sample_config.push_method = "BARK"
-        send_message(sample_config, "test msg", "title")
+        result = send_message(sample_config, "test msg", "title")
+        assert result is True
         mock_bark.assert_called_once()
 
     @patch("notify.notify._send_anpush")
     def test_dispatch_anpush(self, mock_anpush, sample_config):
         """push_method='ANPUSH' 调用 AnPush"""
+        mock_anpush.return_value = True
         sample_config.push_method = "ANPUSH"
-        send_message(sample_config, "test msg", "title")
+        result = send_message(sample_config, "test msg", "title")
+        assert result is True
         mock_anpush.assert_called_once()
 
     def test_unknown_method_warns(self, sample_config, caplog):
@@ -53,7 +64,18 @@ class TestSendMessageDispatch:
     def test_empty_method_noop(self, sample_config):
         """空字符串不崩溃"""
         sample_config.push_method = ""
-        send_message(sample_config, "msg", "title")  # 不应抛异常
+        result = send_message(sample_config, "msg", "title")  # 不应抛异常
+        assert result is False
+
+    def test_incomplete_config_returns_false(self, sample_config, caplog):
+        """配置不完整时返回 False 并记录 warning"""
+        sample_config.push_method = "TG"
+        sample_config.telegram_bot_token = ""
+        sample_config.channel_id = ""
+        with caplog.at_level(logging.WARNING):
+            result = send_message(sample_config, "msg", "title")
+        assert result is False
+        assert "配置不完整" in caplog.text
 
 
 # ========== 钉钉推送 ==========
@@ -127,7 +149,7 @@ class TestBark:
 
     @patch("notify.notify.requests.get")
     def test_request_exception_no_crash(self, mock_get):
-        """请求异常不崩溃"""
+        """请求异常时 tenacity 重试 3 次后抛出异常"""
         import requests as req
         mock_get.side_effect = req.exceptions.RequestException("network error")
 
@@ -135,8 +157,8 @@ class TestBark:
         config.bark_url = "https://example.com/bark/"
         config.bark_extra = ""
 
-        result = _send_bark(config, "msg", "title")
-        assert result is None
+        with pytest.raises(req.exceptions.RequestException):
+            _send_bark(config, "msg", "title")
 
 
 # ========== AnPush 推送 ==========
@@ -161,17 +183,19 @@ class TestAnPush:
 # ========== Telegram 推送 ==========
 
 class TestTelegram:
-    """Telegram 推送测试"""
+    """Telegram 推送测试（基于 HTTP API）"""
 
-    @patch("notify.notify.Bot")
-    def test_calls_bot_send_message(self, mock_bot_cls, sample_config):
-        """Bot.send_message 被正确调用"""
-        import asyncio
-
-        mock_bot = MagicMock()
-        mock_bot.send_message = AsyncMock()
-        mock_bot_cls.return_value = mock_bot
+    @patch("notify.notify.requests.post")
+    def test_send_via_requests(self, mock_post, sample_config):
+        """requests.post 被正确调用，URL 含 bot token"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_post.return_value = mock_response
 
         sample_config.push_method = "TG"
-        send_message(sample_config, "test msg", "title")
-        mock_bot.send_message.assert_called_once()
+        result = send_message(sample_config, "test msg", "title")
+
+        assert result is True
+        call_args = mock_post.call_args
+        assert "api.telegram.org" in call_args[0][0]
+        assert "test msg" in str(call_args[1]["json"])

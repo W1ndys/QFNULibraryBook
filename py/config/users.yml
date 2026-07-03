@@ -1,0 +1,10 @@
+# 多用户配置文件
+# 列出每个用户的子配置文件路径（相对于本文件的相对路径，或绝对路径）
+# name 字段可选，仅用于日志标识；未设置时使用配置中的 USERNAME
+
+users:
+  - config: config_studentA.yml
+    name: "张柏维"
+
+  - config: config_studentB.yml
+    name: "郑欣悦"

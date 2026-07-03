@@ -4,13 +4,13 @@
 """
 import argparse
 import logging
-import sys
 
 from config.config import AppConfig
 from auth.token import TokenManager, AuthenticationError
 from notify.notify import send_message
 from api.constants import URL_CHECK_OUT, DEFAULT_HEADERS
 from api.http import post_with_retry, RequestFailed
+from api.exceptions import SignOutFailed
 from get_info import get_member_seat
 
 logger = logging.getLogger(__name__)
@@ -40,28 +40,28 @@ def go_home(config: AppConfig, token_mgr: TokenManager):
                 except RequestFailed:
                     logger.error("签退请求失败，超过最大重试次数")
                     send_message(config, "\n超过最大重试次数,请求失败。", "图书馆签退通知")
-                    sys.exit()
+                    raise SignOutFailed("超过最大重试次数,请求失败。")
 
                 if "msg" in res:
                     status = res["msg"]
                     logger.info("签退状态：" + status)
                     if status == "完全离开操作成功":
                         send_message(config, "签退成功", "图书馆签退通知")
-                        sys.exit()
+                        return True
                     else:
                         logger.info("已经签退")
             else:
                 logger.error("没有找到正在使用的座位，今天你可能没有预约座位")
                 send_message(config, "\n没有找到正在使用的座位，今天你可能没有预约座位", "图书馆签退通知")
-                sys.exit()
+                return False
         else:
             logger.error("获取数据失败，请检查登录状态")
-            sys.exit()
+            return False
 
     except AuthenticationError as e:
         logger.error(str(e))
         send_message(config, f"\n{e}", "图书馆签退通知")
-        sys.exit()
+        raise SignOutFailed(str(e)) from e
     except KeyError:
         logger.error("返回数据与规则不符，大概率是没有登录")
 

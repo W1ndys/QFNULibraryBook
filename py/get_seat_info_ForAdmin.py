@@ -6,7 +6,6 @@ import argparse
 import json
 import logging
 import sys
-import time
 
 import requests
 
@@ -50,7 +49,6 @@ def get_seat_info(build_id, segment, nowday, save_file=None):
             if seat["status_name"] == "空闲":
                 free_seats.append({"id": seat["id"], "no": seat["no"]})
 
-        time.sleep(1)
         return free_seats
 
     except requests.exceptions.Timeout:

@@ -5,13 +5,13 @@
 import argparse
 import logging
 import random
-import sys
 
 from config.config import AppConfig
 from auth.token import TokenManager, AuthenticationError
 from notify.notify import send_message
 from api.constants import URL_GET_SEAT, DEFAULT_HEADERS
 from api.http import post_with_retry, RequestFailed
+from api.exceptions import ReservationFailed
 from crypto.aes import encrypt_seat_data
 from classrooms import classroom_id_mapping, EXCLUDE_ID
 from get_info import get_date, get_seat_info, get_segment, get_build_id, get_member_seat
@@ -66,7 +66,7 @@ def check_reservation_status(seat_result, config, token_mgr, messages):
                 logger.info("此位置已被预约或位置不可用")
             elif status == "取消成功":
                 logger.info("取消成功")
-                sys.exit()
+                return True
             else:
                 logger.info(f"未知状态信息: {status}")
                 return True
@@ -77,7 +77,7 @@ def check_reservation_status(seat_result, config, token_mgr, messages):
         messages.append("\n未能获取有效的座位预约状态，token已失效")
         title = f"脚本执行通知 - 学号: {config.username}"
         send_message(config, "\n".join(messages), title)
-        sys.exit()
+        raise ReservationFailed("Token已失效，预约失败")
     return False
 
 
@@ -97,7 +97,7 @@ def post_to_get_seat(select_id, segment, config, token_mgr, messages):
         messages.append("\n超过最大重试次数,请求失败。")
         title = f"脚本执行通知 - 学号: {config.username}"
         send_message(config, "\n".join(messages), title)
-        sys.exit()
+        raise ReservationFailed("超过最大重试次数,请求失败。")
 
     return check_reservation_status(seat_result, config, token_mgr, messages)
 
@@ -215,7 +215,7 @@ def select_seat(build_id, segment, nowday, config, token_mgr, messages):
         messages.append("\n超过最大重试次数,无法获取座位")
         title = f"脚本执行通知 - 学号: {config.username}"
         send_message(config, "\n".join(messages), title)
-        sys.exit()
+        raise ReservationFailed("超过最大重试次数,无法获取座位")
 
 
 def run_seat_reservation(config: AppConfig, token_mgr: TokenManager):
@@ -240,7 +240,7 @@ def run_seat_reservation(config: AppConfig, token_mgr: TokenManager):
         messages.append(f"\n{e}")
         title = f"脚本执行通知 - 学号: {config.username}"
         send_message(config, "\n".join(messages), title)
-        sys.exit()
+        raise ReservationFailed(f"登录认证失败: {e}") from e
     except KeyboardInterrupt:
         logger.info("主动退出程序，程序将退出。")
 
