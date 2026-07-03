@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>曲阜师范大学图书馆 - 座位管理</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #1a3a6b 0%, #2b5ca8 50%, #1a3a6b 100%);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+    border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    width: 400px; max-width: 90vw; padding: 40px 36px;
+    position: relative; z-index: 1;
+    transition: all 0.3s ease;
+  }
+
+  .logo-section {
+    text-align: center; margin-bottom: 32px;
+  }
+
+  .logo-section img {
+    width: 64px; height: 64px; border-radius: 12px; margin-bottom: 12px;
+  }
+
+  .logo-section h1 {
+    font-size: 22px; font-weight: 600; color: #1a3a6b; letter-spacing: 1px;
+  }
+
+  .logo-section p {
+    font-size: 13px; color: #6b7280; margin-top: 4px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;
+  }
+
+  .input-wrapper {
+    position: relative; display: flex; align-items: center;
+  }
+
+  .input-wrapper .icon {
+    position: absolute; left: 14px; width: 18px; height: 18px;
+    color: #9ca3af; pointer-events: none;
+  }
+
+  .input-wrapper input {
+    width: 100%; padding: 12px 14px 12px 42px;
+    border: 1.5px solid #e5e7eb; border-radius: 10px;
+    font-size: 15px; transition: all 0.2s; background: #f9fafb;
+  }
+
+  .input-wrapper input:focus {
+    outline: none; border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+
+  .login-btn {
+    width: 100%; padding: 13px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff; font-size: 16px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; margin-top: 8px;
+  }
+
+  .login-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(37,99,235,0.3); }
+  .login-btn:active { transform: translateY(0); }
+  .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+  .links {
+    display: flex; justify-content: center; gap: 24px; margin-top: 20px;
+  }
+
+  .links a {
+    font-size: 13px; color: #6b7280; text-decoration: none; transition: color 0.2s;
+  }
+
+  .links a:hover { color: #2563eb; }
+
+  .error-msg {
+    background: #fef2f2; color: #dc2626; font-size: 13px; padding: 10px 14px;
+    border-radius: 8px; margin-bottom: 16px; display: none; text-align: center;
+  }
+
+  .error-msg.show { display: block; }
+
+  /* 控制面板 */
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .login-form { display: block; }
+  .login-form.hidden { display: none; }
+
+  .welcome {
+    text-align: center; margin-bottom: 28px;
+  }
+
+  .welcome h2 { font-size: 20px; color: #1a3a6b; margin-bottom: 4px; }
+  .welcome p { font-size: 14px; color: #6b7280; }
+
+  .actions {
+    display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;
+  }
+
+  .action-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 18px; border: none; border-radius: 12px;
+    font-size: 17px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; color: #fff;
+  }
+
+  .action-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none !important; }
+
+  .action-btn.checkin {
+    background: linear-gradient(135deg, #059669, #10b981);
+    box-shadow: 0 4px 14px rgba(5,150,105,0.3);
+  }
+  .action-btn.checkin:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(5,150,105,0.4); }
+
+  .action-btn.signout {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    box-shadow: 0 4px 14px rgba(217,119,6,0.3);
+  }
+  .action-btn.signout:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(217,119,6,0.4); }
+
+  .action-btn .spinner {
+    width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite;
+    display: none;
+  }
+  .action-btn.loading .spinner { display: inline-block; }
+  .action-btn.loading .btn-text { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result {
+    font-size: 14px; padding: 12px 16px; border-radius: 10px; text-align: center;
+    display: none; margin-bottom: 16px;
+  }
+  .result.show { display: block; }
+  .result.success { background: #ecfdf5; color: #059669; }
+  .result.fail { background: #fef2f2; color: #dc2626; }
+
+  .logout-btn {
+    display: block; width: 100%; padding: 10px;
+    background: transparent; border: 1.5px solid #e5e7eb; border-radius: 10px;
+    color: #6b7280; font-size: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .logout-btn:hover { border-color: #dc2626; color: #dc2626; }
+
+  .footer {
+    text-align: center; margin-top: 24px; padding-top: 16px;
+    border-top: 1px solid #f3f4f6;
+  }
+  .footer p { font-size: 12px; color: #9ca3af; }
+  .footer .contact { color: #2563eb; font-weight: 500; font-size: 13px; }
+
+  @media (max-width: 480px) {
+    .card { padding: 28px 20px; }
+    .logo-section h1 { font-size: 19px; }
+    .action-btn { padding: 15px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="card" id="app">
+
+  <!-- 登录表单 -->
+  <div class="login-form" id="loginForm">
+    <div class="logo-section">
+      <img src="/static/logo.png" alt="校徽" onerror="this.style.display='none'">
+      <h1>统一身份认证</h1>
+      <p>曲阜师范大学 · 图书馆座位管理</p>
+    </div>
+    <div class="error-msg" id="loginError"></div>
+    <div class="form-group">
+      <label>学号 / 工号</label>
+      <div class="input-wrapper">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <input type="text" id="username" placeholder="请输入学号/工号" autocomplete="username">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>密码</label>
+      <div class="input-wrapper">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password">
+      </div>
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="handleLogin()">登 录</button>
+    <div class="links">
+      <a href="https://ids.qfnu.edu.cn/authserver/retrieve-password/accountActivation/index.html" target="_blank">账号激活</a>
+      <a href="https://ids.qfnu.edu.cn/authserver/retrieve-password/retrievePassword/index.html" target="_blank">忘记密码</a>
+    </div>
+  </div>
+
+  <!-- 控制面板 -->
+  <div class="panel" id="panel">
+    <div class="welcome">
+      <h2 id="welcomeName">欢迎</h2>
+      <p>图书馆座位管理系统</p>
+    </div>
+    <div class="result" id="result"></div>
+    <div class="actions">
+      <button class="action-btn checkin" id="checkinBtn" onclick="handleAction('checkin')">
+        <span class="btn-text">📖 签 到</span>
+        <span class="spinner"></span>
+      </button>
+      <button class="action-btn signout" id="signoutBtn" onclick="handleAction('signout')">
+        <span class="btn-text">📕 签 退</span>
+        <span class="spinner"></span>
+      </button>
+    </div>
+    <button class="logout-btn" onclick="handleLogout()">退出登录</button>
+  </div>
+
+  <div class="footer">
+    <p class="contact">抢课联系 fastjackcost880@gmail.com</p>
+    <p>曲阜师范大学 All Rights Reserved</p>
+  </div>
+</div>
+
+<script>
+const API_BASE = '';
+const FETCH_TIMEOUT = 20000;
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.classList.add('show');
+}
+
+function clearError() {
+  document.getElementById('loginError').classList.remove('show');
+}
+
+function showResult(success, msg) {
+  const el = document.getElementById('result');
+  el.textContent = msg; el.className = 'result show ' + (success ? 'success' : 'fail');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+async function apiPost(path, body) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  try {
+    const res = await fetch(API_BASE + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = await res.json();
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (err) {
+    if (err.name === 'AbortError') return { ok: false, error: '请求超时，请重试', error_code: 'TIMEOUT' };
+    return { ok: false, error: '网络错误: ' + err.message, error_code: 'NETWORK_ERROR' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleLogin() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  if (!username || !password) { showError('请输入学号和密码'); return; }
+  clearError();
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = '登录中...';
+
+  const res = await apiPost('/api/login', { username, password });
+  btn.disabled = false; btn.textContent = '登 录';
+
+  if (res.success) {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('panel').classList.add('active');
+    document.getElementById('welcomeName').textContent = '欢迎 ' + (res.name || username);
+  } else {
+    showError(res.error || '登录失败');
+  }
+}
+
+async function handleAction(type) {
+  const btn = document.getElementById(type === 'checkin' ? 'checkinBtn' : 'signoutBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  const res = await apiPost('/api/' + type);
+  btn.classList.remove('loading'); btn.disabled = false;
+
+  if (res.success) {
+    showResult(true, type === 'checkin' ? '✅ 签到成功' : '✅ 签退成功');
+  } else {
+    showResult(false, '❌ ' + (res.error || '操作失败'));
+  }
+}
+
+async function handleLogout() {
+  await apiPost('/api/logout');
+  document.getElementById('panel').classList.remove('active');
+  document.getElementById('loginForm').classList.remove('hidden');
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+}
+
+// 键盘回车触发登录
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !document.getElementById('panel').classList.contains('active')) {
+    handleLogin();
+  }
+});
+
+// 检查登录状态
+(async function checkStatus() {
+  try {
+    const res = await fetch('/api/status', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const data = await res.json();
+    if (data.logged_in) {
+    document.getElementById('loginForm').classList.add('hidden');
+    document.getElementById('panel').classList.add('active');
+    document.getElementById('welcomeName').textContent = '欢迎 ' + (res.username || '');
+  }
+})();
+</script>
+</body>
+</html>
