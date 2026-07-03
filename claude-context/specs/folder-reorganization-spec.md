@@ -194,8 +194,8 @@ QFNULibraryBook/
 │   ├── studentB.yml            # ← 原 py/config_studentB.yml
 │   ├── template.yml            # ← 原 py/config.yml
 │   └── users.yml               # ← 原 py/config/users.yml
-├── json/seat_info/             # 静态座位布局数据
-├── py/                        # Python 源码
+├── data/seat_info/             # 静态座位布局数据
+├── src/                        # Python 源码
 │   ├── api/                    # API 层（constants, http, exceptions）
 │   ├── auth/                   # 认证（login, token）
 │   ├── config/                 # 配置管理模块代码（config.py）

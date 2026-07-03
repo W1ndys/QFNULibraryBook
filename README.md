@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 ### 配置
 
-编辑 `py/config.yml`（模板）或创建 `py/config_studentX.yml`（多用户），填入：
+编辑 `configs/template.yml`（模板）或创建 `configs/studentX.yml`（多用户），填入：
 
 - `USERNAME` / `PASSWORD`：学号和密码
 - `PUSH_METHOD`：通知方式（`TG` / `DD` / `BARK` / `ANPUSH`）
@@ -50,16 +50,16 @@ pip install -r requirements.txt
 
 ```bash
 # 预约座位
-python py/get_seat.py -c config_studentA.yml
+python src/get_seat.py -c configs/studentA.yml
 
 # 签到
-python py/check_in.py -c config_studentA.yml
+python src/check_in.py -c configs/studentA.yml
 
 # 签退
-python py/sign_out.py -c config_studentA.yml
+python src/sign_out.py -c configs/studentA.yml
 
 # 管理员：抓取座位信息快照
-python py/get_seat_info_ForAdmin.py -c config.yml --classrooms "东校区图书馆-三楼自修区"
+python src/get_seat_info_ForAdmin.py -c configs/template.yml --classrooms "东校区图书馆-三楼自修区"
 ```
 
 ## 预约模式
@@ -88,7 +88,7 @@ python py/get_seat_info_ForAdmin.py -c config.yml --classrooms "东校区图书�
 ## 项目结构
 
 ```
-py/
+src/
 ├── auth/           # 登录认证（滑块验证码 + CAS + Token 管理）
 ├── config/         # 配置管理（AppConfig 数据类）
 ├── notify/         # 消息推送（TG/DD/Bark/AnPush）
@@ -99,16 +99,14 @@ py/
 ├── check_in.py     # 签到入口
 ├── sign_out.py     # 签退入口
 └── get_info.py     # 座位查询工具
-json/seat_info/     # 教室座位布局快照
+data/seat_info/     # 教室座位布局快照
 .github/workflows/  # CI 定时任务
 ```
 
-## CI/CD
+CI/CD
+-----
 
-GitHub Actions 自动执行：
-- **签到**：每天 08:20（北京时间）
-- **签退**：每天 21:30（北京时间）
-- 支持 `workflow_dispatch` 手动触发
+此前已通过 GitHub Actions 自动执行签到和签退（已移除），当前可手动运行。
 
 ## 贡献者
 

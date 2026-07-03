@@ -11,8 +11,8 @@
 | 范围 | 说明 |
 |------|------|
 | **包含** | `web/` 目录下所有文件：Flask 后端 + 前端页面 + README |
-| **包含** | 基于现有 `py/` 代码的 Python import（不修改 `py/`） |
-| **不包含** | 修改 `py/` 下任何文件 |
+| **包含** | 基于现有 `src/` 代码的 Python import（不修改 `src/`） |
+| **不包含** | 修改 `src/` 下任何文件 |
 | **不包含** | 预约（抢座）功能 |
 | **不包含** | 用户注册、数据库、持久化存储 |
 | **不包含** | 生产级部署（WSGI 服务器配置留作后续） |
@@ -28,12 +28,12 @@ Browser (HTML/CSS/JS)
     │  POST /api/signout  (签退)
     ▼
 Flask (web/app.py)
-    ├── sys.path.insert(0, os.path.join(__file__, '..', 'py'))   # 绝对路径
+    ├── sys.path.insert(0, os.path.join(__file__, '..', 'src'))  # 绝对路径
     │   from auth.login import qfnu_login
     │   from auth.token import TokenManager
     │   from config.config import AppConfig
     ▼
-py/ (现有代码，不动)
+src/（现有代码，不动）
 ```
 
 **运行方式**：`cd web && python app.py`（结果以 `cd web && python app.py` 为准，不保证从其他 CWD 运行）
@@ -44,7 +44,7 @@ py/ (现有代码，不动)
 
 ```python
 import os, sys, logging
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'py'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))
 
 from flask import Flask, session, request, jsonify, render_template
 from flask_session import Session
@@ -147,7 +147,7 @@ Flask-Session>=0.8,<1.0
 | 滑块验证码 | 每次登录 2-5s 自动破解，签到/签退会重新登录（不缓存 token） |
 | 密码存储 | session 存明文密码，服务端 filesystem 存储，仅限本地/可信环境 |
 | 单线程 | Flask dev server 单线程，登录时阻塞其他请求 |
-| 调试图片 | `login.py` 向 `py/debug_captcha/` 写调试 PNG（已清理过该目录） |
+| 调试图片 | `login.py` 向 `src/debug_captcha/` 写调试 PNG（已清理过该目录） |
 | 无多用户隔离 | 单 Flask 实例仅适合单人使用 |
 
 ## 4. 成功标准
@@ -160,7 +160,7 @@ Flask-Session>=0.8,<1.0
 - [ ] 登录失败显示错误提示
 - [ ] 页脚显示联系邮箱
 - [ ] `README.md` 含完整说明
-- [ ] `py/` 无文件被修改
+- [ ] `src/` 无文件被修改
 - [ ] 无 `X-Requested-With` 的 POST 被拒
 
 ## 5. 实施步骤
@@ -176,7 +176,7 @@ Flask-Session>=0.8,<1.0
 
 | 异常 | 处理 |
 |------|------|
-| Flask 无法 import py/ 模块 | 检查 `sys.path` 的 `__file__` 解析 |
+| Flask 无法 import src/ 模块 | 检查 `sys.path` 的 `__file__` 解析 |
 | `send_message()` 报错 | `AppConfig(push_method='')` 跳过 |
 | TokenManager 不能序列化 | 已改为 session 存明文，每次重建 |
 | sync 跨重启失效 | 固定 `FLASK_SECRET_KEY` 环境变量 |
