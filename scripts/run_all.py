@@ -2,11 +2,11 @@
 多用户并发入口 — 同时为多个用户执行预约/签到/签退。
 
 用法:
-  python run_all.py seat --users py/config/users.yml      # 多用户并发抢座
-  python run_all.py checkin --users py/config/users.yml   # 多用户签到
-  python run_all.py signout --users py/config/users.yml   # 多用户签退
+  python run_all.py seat --users configs/users.yml      # 多用户并发抢座
+  python run_all.py checkin --users configs/users.yml   # 多用户签到
+  python run_all.py signout --users configs/users.yml   # 多用户签退
 
-  python run_all.py seat -u py/config/users.yml --notify-mode aggregated  # 聚合通知
+  python run_all.py seat -u configs/users.yml --notify-mode aggregated  # 聚合通知
 
 支持 KeyboardInterrupt 优雅关闭。
 """
@@ -20,6 +20,9 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 import yaml
+
+# 添加 py/ 目录到路径，使脚本可从 scripts/ 目录独立运行
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "py"))
 
 from config.config import AppConfig
 from auth.token import TokenManager
@@ -55,7 +58,7 @@ class UsersConfig:
                 f"users.yml 格式错误：缺少 'users' 键，请检查文件格式\n"
                 f"正确格式：\n"
                 f"  users:\n"
-                f"    - config: config_studentA.yml\n"
+                f"    - config: studentA.yml\n"
                 f"      name: \"可选别名\""
             )
 
@@ -234,8 +237,8 @@ def main():
     )
     parser.add_argument(
         "-u", "--users",
-        default="py/config/users.yml",
-        help="多用户配置文件路径（默认: py/config/users.yml）"
+        default="configs/users.yml",
+        help="多用户配置文件路径（默认: configs/users.yml）"
     )
     parser.add_argument(
         "-w", "--max-workers",

@@ -2,18 +2,20 @@
 19:20 预约窗口敏感性测试脚本
 ============================
 在 19:19:00 启动，持续测量到 19:25:00，记录 API 响应变化。
-用法: python time_window_test.py -c config_studentA.yml
+用法: python scripts/time_window_test.py -c configs/studentA.yml
 """
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime
 
 import requests
 
-sys.path.insert(0, ".")
+# 添加 py/ 目录到路径，使脚本可从 scripts/ 目录独立运行
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "py"))
 
 from config.config import AppConfig
 from auth.token import TokenManager, AuthenticationError

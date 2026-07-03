@@ -2,20 +2,21 @@
 图书馆预约系统 API 性能探测脚本
 ================================
 只读探测，不触发真实预约。使用 TokenManager 认证。
-用法: python performance_probe.py -c config_studentA.yml [-n 10]
+用法: python scripts/performance_probe.py -c configs/studentA.yml [-n 10]
 """
 import argparse
 import json
 import logging
 import statistics
+import os
 import sys
 import time
 from datetime import datetime
 
 import requests
 
-# 添加 py/ 目录到路径
-sys.path.insert(0, ".")
+# 添加 py/ 目录到路径，使脚本可从 scripts/ 目录独立运行
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "py"))
 
 from config.config import AppConfig
 from auth.token import TokenManager, AuthenticationError
