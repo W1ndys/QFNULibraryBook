@@ -1,5 +1,5 @@
 """
-测试 py/get_seat_info_ForAdmin.py — 管理员工具
+测试 src/get_seat_info_ForAdmin.py — 管理员工具
 """
 import json
 from unittest.mock import patch, MagicMock
@@ -13,9 +13,8 @@ from api.http import RequestFailed
 class TestGetSeatInfo:
     """get_seat_info 函数测试"""
 
-    @patch("get_seat_info_ForAdmin.time.sleep")
     @patch("get_seat_info_ForAdmin.post_with_retry")
-    def test_returns_free_seats(self, mock_retry, mock_sleep):
+    def test_returns_free_seats(self, mock_retry):
         """只返回空闲座位"""
         mock_retry.return_value = {
             "data": [
@@ -29,9 +28,8 @@ class TestGetSeatInfo:
         assert result[0]["id"] == "100"
         assert result[1]["id"] == "102"
 
-    @patch("get_seat_info_ForAdmin.time.sleep")
     @patch("get_seat_info_ForAdmin.post_with_retry")
-    def test_saves_file(self, mock_retry, mock_sleep, tmp_path):
+    def test_saves_file(self, mock_retry, tmp_path):
         """save_file 非空时写入 JSON 文件"""
         response_data = {"data": [{"id": "100", "no": "001", "status_name": "空闲"}]}
         mock_retry.return_value = response_data
@@ -44,9 +42,8 @@ class TestGetSeatInfo:
             saved = json.load(f)
         assert saved == response_data
 
-    @patch("get_seat_info_ForAdmin.time.sleep")
     @patch("get_seat_info_ForAdmin.post_with_retry")
-    def test_no_save(self, mock_retry, mock_sleep):
+    def test_no_save(self, mock_retry):
         """save_file=None 不写文件"""
         mock_retry.return_value = {"data": [{"id": "100", "no": "001", "status_name": "空闲"}]}
         result = get_seat_info(16, 999, "2026-06-28")
