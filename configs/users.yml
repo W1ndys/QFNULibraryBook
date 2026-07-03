@@ -4,7 +4,7 @@
 
 users:
   - config: studentA.yml
-    name: "张柏维"
+    name: "学生 A"
 
   - config: studentB.yml
-    name: "郑欣悦"
+    name: "学生 B"

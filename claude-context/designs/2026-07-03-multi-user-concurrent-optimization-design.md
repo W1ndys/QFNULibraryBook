@@ -219,9 +219,9 @@ if __name__ == "__main__":
 
 users:
   - config: config_studentA.yml
-    name: "张柏维"       # 可选：仅用于日志标识
+    name: "学生 A"       # 可选：仅用于日志标识
   - config: config_studentB.yml
-    name: "郑欣悦"
+    name: "学生 B"
 ```
 
 ## 6. 改动清单

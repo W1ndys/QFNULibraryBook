@@ -283,9 +283,9 @@ logging.basicConfig(
 
 users:
   - config: config_studentA.yml
-    name: "张柏维"       # 可选
+    name: "学生 A"       # 可选
   - config: config_studentB.yml
-    name: "郑欣悦"       # 可选
+    name: "学生 B"       # 可选
 ```
 
 ### 5.3 `py/api/exceptions.py` — 自定义异常类（可选拆分）

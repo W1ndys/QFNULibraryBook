@@ -33,7 +33,7 @@
   }
 
   .logo-section img {
-    width: 64px; height: 64px; border-radius: 12px; margin-bottom: 12px;
+    width: 180px; height: auto; margin-bottom: 12px;
   }
 
   .logo-section h1 {
@@ -229,7 +229,6 @@
   </div>
 
   <div class="footer">
-    <p class="contact">抢课联系 fastjackcost880@gmail.com</p>
     <p>曲阜师范大学 All Rights Reserved</p>
   </div>
 </div>
@@ -274,23 +273,31 @@ async function apiPost(path, body) {
 }
 
 async function handleLogin() {
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value;
-  if (!username || !password) { showError('请输入学号和密码'); return; }
-  clearError();
+  console.log('handleLogin called');
+  try {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) { showError('请输入学号和密码'); return; }
+    clearError();
 
-  const btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = '登录中...';
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = '登录中...';
 
-  const res = await apiPost('/api/login', { username, password });
-  btn.disabled = false; btn.textContent = '登 录';
+    const res = await apiPost('/api/login', { username, password });
+    btn.disabled = false; btn.textContent = '登 录';
 
-  if (res.success) {
-    document.getElementById('loginForm').classList.add('hidden');
-    document.getElementById('panel').classList.add('active');
-    document.getElementById('welcomeName').textContent = '欢迎 ' + (res.name || username);
-  } else {
-    showError(res.error || '登录失败');
+    if (res.success) {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('panel').classList.add('active');
+      document.getElementById('welcomeName').textContent = '欢迎 ' + (res.name || username);
+    } else {
+      showError(res.error || '登录失败');
+    }
+  } catch(e) {
+    console.error('handleLogin error:', e);
+    showError('出错: ' + e.message);
+    document.getElementById('loginBtn').disabled = false;
+    document.getElementById('loginBtn').textContent = '登 录';
   }
 }
 
@@ -329,10 +336,11 @@ document.addEventListener('keydown', (e) => {
     const res = await fetch('/api/status', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
     const data = await res.json();
     if (data.logged_in) {
-    document.getElementById('loginForm').classList.add('hidden');
-    document.getElementById('panel').classList.add('active');
-    document.getElementById('welcomeName').textContent = '欢迎 ' + (res.username || '');
-  }
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('panel').classList.add('active');
+      document.getElementById('welcomeName').textContent = '欢迎 ' + (data.username || '');
+    }
+  } catch (e) {}
 })();
 </script>
 </body>

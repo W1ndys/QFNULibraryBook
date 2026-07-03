@@ -47,4 +47,3 @@ python app.py
 
 - 每次签到/签退都会触发完整登录流程（~2-5s 滑块破解），请耐心等待
 - 密码存储在服务端 session 中，仅限个人使用
-- 页脚：抢课联系 fastjackcost880@gmail.com

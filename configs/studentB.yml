@@ -18,15 +18,15 @@ ANPUSH_CHANNEL: ""
 
 # 钉钉 token
 # 在群内添加机器人，获取机器人的 webhook 地址中的 token 值和签名，并将其填入 DD_BOT_TOKEN 和 DD_BOT_SECRET 中
-DD_BOT_TOKEN: "c443d4b28d91876cb0d2a36e405b44c525e701e178f41445f09a468f4d453d4f"
-DD_BOT_SECRET: "SEC991410be16a0e7156b6a015880d69768df8684a3be80bcd516c872eec032914e"
+DD_BOT_TOKEN: "YOUR_DD_BOT_TOKEN"
+DD_BOT_SECRET: "YOUR_DD_BOT_SECRET"
 
 # 是否是 Github Action
 GITHUB: false
 
 # 账号授权相关，USERNAME 和 PASSWORD 请填入你的学号和密码
-USERNAME: "2023413034"
-PASSWORD: "Zxy200411@"
+USERNAME: "YOUR_STUDENT_ID"
+PASSWORD: "YOUR_PASSWORD"
 
 # 选座模式 ['1', '2', '3']
 # 1 到 3 选座逐渐严格: 1 选择靠近插座且指定范围内的位置, 2 选择靠近插座的位置, 3 随机选择
